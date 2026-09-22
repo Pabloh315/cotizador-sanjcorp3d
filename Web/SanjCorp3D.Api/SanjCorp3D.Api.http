@@ -1,0 +1,6 @@
+@SanjCorp3D.Api_HostAddress = http://localhost:5079
+
+GET {{SanjCorp3D.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

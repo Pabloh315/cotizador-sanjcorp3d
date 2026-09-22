@@ -1,0 +1,11 @@
+{
+  "name": "SANJ CORP 3D",
+  "short_name": "SANJ CORP",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07120f",
+  "theme_color": "#07120f",
+  "icons": [
+    { "src": "/sanjcorp-logo.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any maskable" }
+  ]
+}

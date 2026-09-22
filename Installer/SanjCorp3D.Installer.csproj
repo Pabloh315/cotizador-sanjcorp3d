@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>SANJ-CORP-3D-Setup-v1.0.0</AssemblyName>
+    <RootNamespace>SanjCorp3D.Installer</RootNamespace>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>SANJ CORP 3D - Instalador</Product>
+    <Company>SANJ CORP TECHNOLOGY</Company>
+    <Copyright>Copyright © 2026 SANJ CORP TECHNOLOGY</Copyright>
+    <ApplicationIcon>..\CotizadorSanjCorp3D\Assets\app.ico</ApplicationIcon>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Payload\CotizadorSanjCorp3D.exe" LogicalName="SanjCorp3D.Payload.CotizadorSanjCorp3D.exe" />
+    <EmbeddedResource Include="..\CotizadorSanjCorp3D\Assets\logo-oficial.jpeg" LogicalName="SanjCorp3D.Assets.logo-oficial.jpeg" />
+  </ItemGroup>
+</Project>

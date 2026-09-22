@@ -1,0 +1,19 @@
+# syntax=docker/dockerfile:1.7
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY Web/SanjCorp3D.Api/SanjCorp3D.Api.csproj Web/SanjCorp3D.Api/
+RUN dotnet restore Web/SanjCorp3D.Api/SanjCorp3D.Api.csproj
+COPY Web/SanjCorp3D.Api/ Web/SanjCorp3D.Api/
+RUN dotnet publish Web/SanjCorp3D.Api/SanjCorp3D.Api.csproj -c Release -o /out --no-restore /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=build /out ./
+RUN mkdir -p /var/lib/sanjcorp3d/keys && chown -R app:app /var/lib/sanjcorp3d
+USER app
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_FORWARDEDHEADERS_ENABLED=true \
+    DataProtection__KeysPath=/var/lib/sanjcorp3d/keys
+EXPOSE 8080
+ENTRYPOINT ["sh", "-c", "exec dotnet SanjCorp3D.Api.dll --urls http://0.0.0.0:${PORT:-8080}"]

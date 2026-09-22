@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Web/">
+    <Project Path="Web/SanjCorp3D.Api.Tests/SanjCorp3D.Api.Tests.csproj" />
+    <Project Path="Web/SanjCorp3D.Api/SanjCorp3D.Api.csproj" />
+    <Project Path="Web/SanjCorp3D.Migrator/SanjCorp3D.Migrator.csproj" />
+  </Folder>
+</Solution>

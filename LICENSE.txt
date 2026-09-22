@@ -1,0 +1,9 @@
+Copyright (c) 2026 SANJ CORP TECHNOLOGY. Todos los derechos reservados.
+
+Este código fuente y sus recursos visuales son propiedad de SANJ CORP TECHNOLOGY.
+No se concede permiso para copiar, modificar, redistribuir, sublicenciar, publicar
+ni comercializar este software, total o parcialmente, sin autorización previa y
+por escrito del titular.
+
+El software se proporciona sin garantías expresas o implícitas, en la medida
+permitida por la legislación aplicable.

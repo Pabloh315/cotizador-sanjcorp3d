@@ -1,0 +1,41 @@
+# Tareas verificadas
+
+- [x] Preservar el ZIP original y registrar SHA-256.
+- [x] Modernizar a .NET 8 Windows Forms.
+- [x] Implementar SQLite local sin bases dentro del repositorio.
+- [x] Implementar fórmula configurable de cotización.
+- [x] Implementar consumos multicolor por filamento.
+- [x] Implementar CRUD de impresoras, filamentos y materiales.
+- [x] Implementar historial, búsqueda, filtros y eliminación confirmada.
+- [x] Implementar reportes y exportación CSV.
+- [x] Implementar configuración, respaldo y restauración.
+- [x] Implementar ayuda sobre flujo manual y datos de laminadores.
+- [x] Usar controles accesibles por teclado y estados con texto.
+- [x] Compilar Release sin errores ni advertencias.
+- [x] Ejecutar prueba integral automatizada.
+- [x] Auditar dependencias y corregir vulnerabilidad transitiva de SQLite.
+- [x] Corregir alta y edición de impresoras, consumibles y resinas.
+- [x] Corregir archivado de materiales.
+- [x] Separar Consumibles y Resinas, migrando Resina SLA.
+- [x] Sustituir margen porcentual por multiplicador manual.
+- [x] Mover costo de impresora a Configuración y mantenimiento a costo por impresión.
+- [x] Eliminar mano de obra y recargo funcional.
+- [x] Corregir textos recortados y validar visualmente las páginas principales.
+- [x] Generar códigos por inicial de cliente, inicial de impresora, fecha y correlativo.
+- [x] Mostrar el código en un campo seleccionable con copia directa.
+- [x] Recuperar cotizaciones completas por código, cliente o proyecto.
+- [x] Confirmar ventas y distinguirlas en el historial.
+- [x] Agregar reporte y CSV de ventas generadas.
+- [x] Retirar el costo por uso de impresora del cálculo y la configuración.
+- [x] Unir el código de cotización sin guiones ni separadores.
+- [x] Corregir la distribución de botones del diálogo de copia.
+- [x] Renombrar la navegación a Consumibles y separar Filamentos y Resinas dentro de la página.
+- [x] Agregar inventario manual de rollos y botellas por tipo y color.
+- [x] Mostrar tipo, color, peso y cantidad de colores en cada cotización.
+- [x] Alertar y bloquear consumibles con existencia cero.
+- [x] Verificar visualmente páginas y diálogos en resolución normal y compacta.
+- [x] Integrar el logo oficial en la aplicación, ventana e instalador.
+- [x] Crear el instalador v1.0.0 por usuario para Windows x64.
+- [x] Preparar una carpeta limpia para GitHub con documentación, scripts y flujo de compilación.
+- [ ] Integrar STL/3MF/G-code; planificado para una fase posterior.
+- [ ] Integrar MongoDB; requiere servidor, autenticación y reglas de sincronización.

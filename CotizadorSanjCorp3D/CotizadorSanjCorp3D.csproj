@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <AssemblyName>CotizadorSanjCorp3D</AssemblyName>
+    <RootNamespace>CotizadorSanjCorp3D</RootNamespace>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>SANJ CORP 3D - Cotizador</Product>
+    <Company>SANJ CORP TECHNOLOGY</Company>
+    <Copyright>Copyright © 2026 SANJ CORP TECHNOLOGY</Copyright>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Modern\**\*.cs" />
+    <EmbeddedResource Include="Assets\logo-oficial.jpeg" LogicalName="CotizadorSanjCorp3D.Assets.logo-oficial.jpeg" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.20" />
+    <PackageReference Include="Microsoft.NET.ILLink.Tasks" Version="8.0.30" PrivateAssets="all" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.13" />
+  </ItemGroup>
+</Project>
