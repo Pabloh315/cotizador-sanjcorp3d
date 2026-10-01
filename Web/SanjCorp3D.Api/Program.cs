@@ -55,7 +55,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 var corsOrigins = (builder.Configuration["Cors:Origins"] ?? "https://cotizadoronline.vercel.app")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
-    policy.WithOrigins(corsOrigins)
+    policy.SetIsOriginAllowed(origin => IsAllowedFrontendOrigin(origin, corsOrigins))
         .AllowAnyHeader()
         .AllowAnyMethod()
         .AllowCredentials()));
@@ -126,6 +126,23 @@ app.MapFallbackToFile("index.html").AllowAnonymous();
 await IdentitySeeder.EnsureSeededAsync(app.Services, app.Configuration);
 app.Run();
 
+static bool IsAllowedFrontendOrigin(string origin, string[] configuredOrigins)
+{
+    if (configuredOrigins.Any(allowed => string.Equals(allowed, origin, StringComparison.OrdinalIgnoreCase)))
+    {
+        return true;
+    }
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
+    {
+        return false;
+    }
+
+    // Vercel creates immutable preview domains for every deployment. Keep this
+    // scoped to this project and team instead of allowing every vercel.app site.
+    return uri.Host.EndsWith("-atlas-3-d.vercel.app", StringComparison.OrdinalIgnoreCase) &&
+        uri.Host.StartsWith("cotizador-sanjcorp3d-", StringComparison.OrdinalIgnoreCase);
+}
 static string ResolveConnectionString(IConfiguration configuration)
 {
     // In hosted environments the provider injects DATABASE_URL. Prefer it over
@@ -134,7 +151,7 @@ static string ResolveConnectionString(IConfiguration configuration)
     if (string.IsNullOrWhiteSpace(value)) throw new InvalidOperationException("Falta ConnectionStrings:PostgreSql o DATABASE_URL.");
     if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != "postgres" && uri.Scheme != "postgresql")) return value;
     var credentials = uri.UserInfo.Split(':', 2);
-    if (credentials.Length != 2) throw new InvalidOperationException("DATABASE_URL no contiene credenciales PostgreSQL válidas.");
+    if (credentials.Length != 2) throw new InvalidOperationException("DATABASE_URL no contiene credenciales PostgreSQL validas.");
     return new Npgsql.NpgsqlConnectionStringBuilder
     {
         Host = uri.Host,
@@ -147,4 +164,3 @@ static string ResolveConnectionString(IConfiguration configuration)
 }
 
 public partial class Program;
-
