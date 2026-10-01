@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   BusinessSettings, Consumable, Dashboard, ExtraMaterial, ExtraMaterialCategory, Printer, Profile, QuoteCalculation,
   QuoteDetail, QuoteRequest, QuoteSummary, Report, TwoFactorSetup, UserAccount, InventoryAlert, Tenant, ChatMessage, ProductCatalog, ConsumableMaterialType, PrintOrder, StoreQuoteRequest, StoreQuoteCalculation,
 } from './types'
@@ -6,6 +6,13 @@
 export type { Dashboard, Profile } from './types'
 
 type ApiError = Error & { status: number; requiresTwoFactor?: boolean }
+type ApiErrorBody = {
+  message?: string
+  title?: string
+  detail?: string
+  requiresTwoFactor?: boolean
+  errors?: Record<string, string[] | string>
+}
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, '')
 const apiUrl = (path: string) => `${API_BASE_URL}${path}`
@@ -18,13 +25,36 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   })
   if (!response.ok) {
-    const body = await response.json().catch(() => ({})) as { message?: string; title?: string; requiresTwoFactor?: boolean }
-    const error = new Error(body.message ?? (response.status >= 500 ? 'El servidor no pudo completar la operación. Revisa que la API local esté encendida.' : body.title) ?? 'No se pudo completar la operación.') as ApiError
+    const body = await readErrorBody(response)
+    const error = new Error(getErrorMessage(response, body)) as ApiError
     error.status = response.status
     error.requiresTwoFactor = body.requiresTwoFactor
     throw error
   }
   return response.status === 204 ? undefined as T : response.json()
+}
+
+async function readErrorBody(response: Response): Promise<ApiErrorBody> {
+  const text = await response.text().catch(() => '')
+  if (!text) return {}
+
+  try {
+    return JSON.parse(text) as ApiErrorBody
+  } catch {
+    return { message: text }
+  }
+}
+
+function getErrorMessage(response: Response, body: ApiErrorBody) {
+  const validationMessage = body.errors
+    ? Object.values(body.errors).flat().filter(Boolean).join(' ')
+    : ''
+
+  return body.message
+    ?? validationMessage
+    ?? body.detail
+    ?? body.title
+    ?? (response.status >= 500 ? 'El servidor no pudo completar la operacion. Revisa los registros de la API.' : 'No se pudo completar la operacion.')
 }
 
 function query(values: Record<string, string | number | boolean | undefined>) {
@@ -121,10 +151,3 @@ export const api = {
   updateProduct: (id: number, name: string) => request<ProductCatalog>(`/api/products/${id}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
   archiveProduct: (id: number) => request<void>(`/api/products/${id}`, { method: 'DELETE' }),
 }
-
-
-
-
-
-
-

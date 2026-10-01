@@ -6,7 +6,7 @@ public sealed class ValidationExceptionHandler : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
-        if (exception is not ArgumentException and not FormatException)
+        if (exception is not ArgumentException and not FormatException and not InvalidOperationException)
         {
             return false;
         }
