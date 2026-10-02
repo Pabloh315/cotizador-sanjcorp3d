@@ -1,8 +1,10 @@
-﻿namespace SanjCorp3D.Api.Contracts;
+namespace SanjCorp3D.Api.Contracts;
 
 public sealed record BusinessSettingsDto(
     string BusinessName, string CurrencyName, string CurrencySymbol,
     decimal ElectricityPerKwh, decimal MaintenancePerPrint,
+    decimal MaintenancePercent, decimal PreparationPercent, decimal LaborPercent,
+    decimal WastePercent, decimal OverheadPercent, decimal PackagingCost, decimal TransportCost,
     decimal DefaultProfitMultiplier, decimal TaxPercent,
     decimal RoundTo, int DecimalPlaces);
 
@@ -17,11 +19,15 @@ public sealed record QuoteRequest(
     string Customer, string ProjectName, long PrinterId, decimal PrintHours,
     int Quantity, decimal AdditionalManualCost, decimal ProfitMultiplier,
     string Notes, IReadOnlyList<ConsumableUsageRequest> Consumables,
-    IReadOnlyList<MaterialUsageRequest> Materials, string? CustomerPhone = null, string? ProductName = null);
+    IReadOnlyList<MaterialUsageRequest> Materials, string? CustomerPhone = null, string? ProductName = null,
+    decimal? MaintenancePercent = null, decimal? PreparationPercent = null, decimal? LaborPercent = null,
+    decimal? WastePercent = null, decimal? OverheadPercent = null, decimal? PackagingCost = null, decimal? TransportCost = null);
 
 public sealed record QuoteCalculationDto(
     decimal TotalWeight, decimal MaterialCost, decimal ElectricityCost,
-    decimal MaintenanceCost, decimal AdditionalCost, decimal Subtotal,
+    decimal MaintenanceCost, decimal PreparationCost, decimal LaborCost,
+    decimal WasteCost, decimal OverheadCost, decimal PackagingCost, decimal TransportCost,
+    decimal AdditionalCost, decimal Subtotal,
     decimal ProfitAmount, decimal TaxAmount, decimal RecommendedPrice);
 
 public sealed record CreateUserRequest(string Username, string DisplayName, string? Email, string Password, string Role, string? ProfilePhotoUrl = null);
@@ -31,10 +37,10 @@ public sealed record CreateMakerTenantRequest(string Name, string Slug, string? 
 public sealed record UpdateTenantRequest(string Name, string? LogoUrl, bool Active);
 public sealed record CreateMakerUserRequest(string Username, string DisplayName, string? Email, string Password);
 public sealed record ProductCatalogDto(long Id, string Name, string Description, string MaterialType, decimal FilamentGrams, decimal MaterialCost, decimal ProductionMinutes, decimal ProfitMultiplier, bool Active);
-public sealed record CreateProductRequest(string Name, string? Description = null, string? MaterialType = null, decimal FilamentGrams = 0, decimal MaterialCost = 0, decimal ProductionMinutes = 0, decimal ProfitMultiplier = 3);
+public sealed record CreateProductRequest(string Name, string? Description = null, string? MaterialType = null, decimal FilamentGrams = 0, decimal MaterialCost = 0, decimal ProductionMinutes = 0, decimal ProfitMultiplier = 1.4m);
 public sealed record StoreQuoteLineRequest(long ProductId, int Quantity);
 public sealed record StoreQuoteRequest(string Customer, string? CustomerPhone, string? ProjectName, IReadOnlyList<long> PrinterIds, string? Notes, IReadOnlyList<StoreQuoteLineRequest> Lines);
-public sealed record StoreQuoteCalculationDto(decimal TotalQuantity, decimal PrintHours, decimal MaterialCost, decimal ElectricityCost, decimal MaintenanceCost, decimal Subtotal, decimal ProfitAmount, decimal TaxAmount, decimal RecommendedPrice);
+public sealed record StoreQuoteCalculationDto(decimal TotalQuantity, decimal PrintHours, decimal MaterialCost, decimal ElectricityCost, decimal MaintenanceCost, decimal PreparationCost, decimal LaborCost, decimal WasteCost, decimal OverheadCost, decimal PackagingCost, decimal TransportCost, decimal Subtotal, decimal ProfitAmount, decimal TaxAmount, decimal RecommendedPrice);
 public sealed record InventoryLossRequest(decimal Grams, string Reason);
 
 public sealed record ConsumableMaterialTypeDto(long Id, string Name, bool Active);
@@ -49,6 +55,3 @@ public sealed record PrintOrderDto(
     DateTime CreatedAtUtc, DateTime? StartedAtUtc, DateTime? EstimatedFinishedAtUtc,
     DateTime? FinishedAtUtc, DateTime? CoolingUntilUtc, DateTime? CompletedAtUtc,
     decimal PrintHours, int Quantity, decimal RecommendedPrice);
-
-
-

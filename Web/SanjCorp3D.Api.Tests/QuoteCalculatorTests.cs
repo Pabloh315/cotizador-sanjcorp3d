@@ -11,10 +11,10 @@ public sealed class QuoteCalculatorTests
     {
         var printer = Printer(powerWatts: 500m);
         var consumable = Consumable("Filamento", 200m, 1.24m);
-        var material = new ExtraMaterial { Id = 1, Name = "Imán", Category = "Herraje", Unit = "unidad", UnitPrice = 3m };
+        var material = new ExtraMaterial { Id = 1, Name = "Iman", Category = "Herraje", Unit = "unidad", UnitPrice = 3m };
         var request = new QuoteRequest("Cliente", "Proyecto", 1, 2m, 3, 5m, 1.5m, "",
             [new ConsumableUsageRequest(1, 100m)], [new MaterialUsageRequest(1, 2m)]);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.2m, 2m, 1.3m, 10m, .1m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.2m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.3m, 10m, .1m, 2);
 
         var result = QuoteCalculator.Calculate(request, printer,
             [new QuoteCalculator.ConsumableLine(consumable, 100m)],
@@ -37,7 +37,7 @@ public sealed class QuoteCalculatorTests
         var request = new QuoteRequest("Cliente", "Figura", 1, 1m, 2, 0m, 1m, "",
             [new ConsumableUsageRequest(1, 120m)], []);
         var resin = Consumable("Resina", 300m, 1.2m);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 0m, 0m, 1m, 0m, .01m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1m, 0m, .01m, 2);
 
         var result = QuoteCalculator.Calculate(request, Printer(0m),
             [new QuoteCalculator.ConsumableLine(resin, 120m)], [], settings);
@@ -54,7 +54,7 @@ public sealed class QuoteCalculatorTests
         // 1.10 Bs/kWh, 900 g at 155 Bs/kg, no maintenance and +50%.
         var request = new QuoteRequest("Cliente", "Pieza", 1, 23m + 20m / 60m, 1, 0m, 1.5m, "",
             [new ConsumableUsageRequest(1, 900m)], []);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.10m, 0m, 1.3m, 0m, 0m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.10m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.3m, 0m, 0m, 2);
 
         var result = QuoteCalculator.Calculate(request, Printer(400m),
             [new QuoteCalculator.ConsumableLine(Consumable("Filamento", 155m, 1.24m), 900m)], [], settings);

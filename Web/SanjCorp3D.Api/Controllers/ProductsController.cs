@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SanjCorp3D.Api.Contracts;
@@ -28,7 +28,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var item = new ProductCatalog { Name = name, Description = request.Description?.Trim() ?? string.Empty, MaterialType = request.MaterialType?.Trim() ?? string.Empty, FilamentGrams = request.FilamentGrams, MaterialCost = request.MaterialCost, ProductionMinutes = request.ProductionMinutes, ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier, Active = true };
         db.ProductCatalogs.Add(item);
         try { await db.SaveChangesAsync(ct); return Ok(ToDto(item)); }
-        catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya está registrado." }); }
+        catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya est registrado." }); }
     }
 
     [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPatch("{id:long}")]
@@ -47,7 +47,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         item.ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier;
         item.Active = true;
         try { await db.SaveChangesAsync(ct); return Ok(ToDto(item)); }
-        catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya está registrado." }); }
+        catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya est registrado." }); }
     }
 
     [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpDelete("{id:long}")]
@@ -70,7 +70,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
     [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("store/quote")]
     public async Task<IActionResult> CreateStoreQuote(StoreQuoteRequest request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotización." });
+        if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotizacion." });
         var (calculation, products, printers) = await CalculateStore(request, ct);
         var next = (await db.Quotes.MaxAsync(x => (long?)x.Id, ct) ?? 0) + 1;
         var created = DateTime.UtcNow;
@@ -78,7 +78,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var printerSummary = string.Join(", ", printers.Select(x => x.Name));
         var noteParts = new List<string>
         {
-            "Cotización de productos de tienda.",
+            "Cotizacion de productos de tienda.",
             $"Materiales: {string.Join(", ", products.Select(x => x.Product.MaterialType).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())}",
             $"Impresoras asignadas: {printerSummary}",
             $"PrinterIds: {string.Join(",", printers.Select(x => x.Id))}",
@@ -118,6 +118,8 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         return CreatedAtAction("Get", "Quotes", new { id = quote.Id }, new { quote.Id, quote.OrderCode, quote.CreatedAtUtc, quote.Customer, quote.ProjectName, quote.ProductName, quote.PrinterName, quote.TotalWeight, CostTotal = quote.Subtotal, quote.RecommendedPrice, SoldAtUtc = (DateTime?)null });
     }
 
+    private static decimal Percent(decimal amount, decimal percent) => amount * Math.Max(0, percent) / 100m;
+
     private async Task<(StoreQuoteCalculationDto Calculation, List<(ProductCatalog Product, int Quantity)> Products, List<Printer> Printers)> CalculateStore(StoreQuoteRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Customer)) throw new ArgumentException("El cliente es obligatorio.");
@@ -126,7 +128,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var printerIds = request.PrinterIds.Distinct().Take(3).ToArray();
         if (printerIds.Length is < 1 or > 3) throw new ArgumentException("Selecciona entre una y tres impresoras.");
         var printers = await db.Printers.Where(x => printerIds.Contains(x.Id) && x.Active).ToListAsync(ct);
-        if (printers.Count != printerIds.Length) throw new ArgumentException("Una de las impresoras seleccionadas no existe o está archivada.");
+        if (printers.Count != printerIds.Length) throw new ArgumentException("Una de las impresoras seleccionadas no existe o est archivada.");
         var busyPrinterNames = await db.PrintOrders.AsNoTracking()
             .Include(x => x.Printer)
             .Where(x => printerIds.Contains(x.PrinterId) && x.Status != "Terminado")
@@ -139,8 +141,8 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var products = new List<(ProductCatalog Product, int Quantity)>();
         foreach (var line in request.Lines)
         {
-            if (!catalog.TryGetValue(line.ProductId, out var product)) throw new ArgumentException("Uno de los productos seleccionados no existe o está archivado.");
-            if (product.ProductionMinutes <= 0) throw new ArgumentException($"Configura el tiempo de producción de {product.Name} antes de cotizarlo.");
+            if (!catalog.TryGetValue(line.ProductId, out var product)) throw new ArgumentException("Uno de los productos seleccionados no existe o est archivado.");
+            if (product.ProductionMinutes <= 0) throw new ArgumentException($"Configura el tiempo de produccin de {product.Name} antes de cotizarlo.");
             products.Add((product, line.Quantity));
         }
         var config = await settings.GetAsync(ct);
@@ -161,37 +163,41 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         }
         var material = products.Sum(x => MaterialUnitCost(x.Product) * x.Quantity);
         var electricity = averagePower / 1000m * printHours * config.ElectricityPerKwh;
-        var maintenance = config.MaintenancePerPrint * quantity;
-        var subtotal = material + electricity + maintenance;
+        var directBase = material + electricity;
+        var maintenance = config.MaintenancePerPrint * quantity + Percent(directBase, config.MaintenancePercent);
+        var preparation = Percent(directBase, config.PreparationPercent);
+        var labor = Percent(directBase, config.LaborPercent);
+        var waste = Percent(directBase, config.WastePercent);
+        var overhead = Percent(directBase, config.OverheadPercent);
+        var packaging = config.PackagingCost * quantity;
+        var transport = config.TransportCost;
+        var subtotal = material + electricity + maintenance + preparation + labor + waste + overhead + packaging + transport;
         var multiplied = products.Sum(x =>
         {
             var lineHours = x.Product.ProductionMinutes * x.Quantity / 60m;
             var lineMaterial = MaterialUnitCost(x.Product) * x.Quantity;
             var lineElectricity = averagePower / 1000m * lineHours * config.ElectricityPerKwh;
-            var lineMaintenance = config.MaintenancePerPrint * x.Quantity;
-            return (lineMaterial + lineElectricity + lineMaintenance) * x.Product.ProfitMultiplier;
-        });
+            var lineBase = lineMaterial + lineElectricity;
+            var lineCosts = lineBase + config.MaintenancePerPrint * x.Quantity + Percent(lineBase, config.MaintenancePercent) + Percent(lineBase, config.PreparationPercent) + Percent(lineBase, config.LaborPercent) + Percent(lineBase, config.WastePercent) + Percent(lineBase, config.OverheadPercent) + config.PackagingCost * x.Quantity;
+            return lineCosts * x.Product.ProfitMultiplier;
+        }) + transport;
         var profit = multiplied - subtotal;
         var tax = multiplied * config.TaxPercent / 100m;
         var recommended = config.RoundTo <= 0 ? multiplied + tax : decimal.Round((multiplied + tax) / config.RoundTo, 0, MidpointRounding.AwayFromZero) * config.RoundTo;
         decimal Round(decimal value) => decimal.Round(value, config.DecimalPlaces, MidpointRounding.AwayFromZero);
-        return (new StoreQuoteCalculationDto(quantity, Round(printHours), Round(material), Round(electricity), Round(maintenance), Round(subtotal), Round(profit), Round(tax), Round(recommended)), products, printers.OrderBy(x => Array.IndexOf(printerIds, x.Id)).ToList());
+        return (new StoreQuoteCalculationDto(quantity, Round(printHours), Round(material), Round(electricity), Round(maintenance), Round(preparation), Round(labor), Round(waste), Round(overhead), Round(packaging), Round(transport), Round(subtotal), Round(profit), Round(tax), Round(recommended)), products, printers.OrderBy(x => Array.IndexOf(printerIds, x.Id)).ToList());
     }
 
     private BadRequestObjectResult? ValidateProduct(CreateProductRequest request, out string name)
     {
         name = request.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name)) return BadRequest(new { message = "El nombre del producto es obligatorio." });
-        if (request.MaterialCost < 0) return BadRequest(new { message = "El costo de producción no puede ser negativo." });
+        if (request.MaterialCost < 0) return BadRequest(new { message = "El costo de produccin no puede ser negativo." });
         if (request.FilamentGrams < 0) return BadRequest(new { message = "Los gramos de filamento no pueden ser negativos." });
-        if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de producción no puede ser negativo." });
+        if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de produccin no puede ser negativo." });
         if (request.ProfitMultiplier < 1) return BadRequest(new { message = "El multiplicador debe ser igual o mayor que 1." });
         return null;
     }
 
     private static ProductCatalogDto ToDto(ProductCatalog item) => new(item.Id, item.Name, item.Description, item.MaterialType, item.FilamentGrams, item.MaterialCost, item.ProductionMinutes, item.ProfitMultiplier, item.Active);
 }
-
-
-
-

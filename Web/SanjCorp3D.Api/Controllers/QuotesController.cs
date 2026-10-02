@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Globalization;
 using System.IO.Compression;
 using System.Net;
@@ -54,7 +54,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
     [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"),HttpPost]
     public async Task<IActionResult>Create(QuoteRequest request,CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotización." });
+        if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotizacion." });
         var resolved=await Resolve(request,ct);var calculation=QuoteCalculator.Calculate(request,resolved.Printer,resolved.Consumables,resolved.Materials,await settings.GetAsync(ct));
         var strategy=db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<IActionResult>(async () =>
@@ -62,7 +62,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             db.ChangeTracker.Clear();
             await using var transaction=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
             long next=(await db.Quotes.MaxAsync(x=>(long?)x.Id,ct)??0)+1;var created=DateTime.UtcNow;
-            var quote=new Quote{OrderCode=$"{Initial(request.Customer)}{Initial(resolved.Printer.Name)}{created:yyyyMMdd}{next:0000}",CreatedAtUtc=created,Customer=request.Customer.Trim(),CustomerPhone=request.CustomerPhone.Trim(),ProjectName=request.ProjectName.Trim(),ProductName=request.ProductName?.Trim()??string.Empty,PrinterId=resolved.Printer.Id,PrinterName=resolved.Printer.Name,PrintHours=request.PrintHours,Quantity=request.Quantity,AdditionalManualCost=request.AdditionalManualCost,ProfitMultiplier=request.ProfitMultiplier,Notes=request.Notes?.Trim()??string.Empty,TotalWeight=calculation.TotalWeight,MaterialCost=calculation.MaterialCost,ElectricityCost=calculation.ElectricityCost,MachineCost=0,MaintenanceCost=calculation.MaintenanceCost,LaborCost=0,AdditionalCost=calculation.AdditionalCost,FunctionalSurcharge=0,Subtotal=calculation.Subtotal,ProfitAmount=calculation.ProfitAmount,TaxAmount=calculation.TaxAmount,RecommendedPrice=calculation.RecommendedPrice};
+            var quote=new Quote{OrderCode=$"{Initial(request.Customer)}{Initial(resolved.Printer.Name)}{created:yyyyMMdd}{next:0000}",CreatedAtUtc=created,Customer=request.Customer.Trim(),CustomerPhone=request.CustomerPhone.Trim(),ProjectName=request.ProjectName.Trim(),ProductName=request.ProductName?.Trim()??string.Empty,PrinterId=resolved.Printer.Id,PrinterName=resolved.Printer.Name,PrintHours=request.PrintHours,Quantity=request.Quantity,AdditionalManualCost=request.AdditionalManualCost,ProfitMultiplier=request.ProfitMultiplier,Notes=request.Notes?.Trim()??string.Empty,TotalWeight=calculation.TotalWeight,MaterialCost=calculation.MaterialCost,ElectricityCost=calculation.ElectricityCost,MachineCost=0,MaintenanceCost=calculation.MaintenanceCost,LaborCost=calculation.LaborCost,AdditionalCost=calculation.AdditionalCost,FunctionalSurcharge=calculation.WasteCost+calculation.OverheadCost,Subtotal=calculation.Subtotal,ProfitAmount=calculation.ProfitAmount,TaxAmount=calculation.TaxAmount,RecommendedPrice=calculation.RecommendedPrice};
             foreach(var line in resolved.Consumables)quote.Consumables.Add(new QuoteConsumable{LegacyConsumableId=line.Item.Id,Name=line.Item.Name,Category=line.Item.Category,Material=line.Item.Material,Color=line.Item.Color,Grams=line.Grams,PricePerUnit=line.Item.PricePerUnit,Density=line.Item.Density,LineCost=decimal.Round(line.UnitCost*request.Quantity,4,MidpointRounding.AwayFromZero)});
             foreach(var line in resolved.Materials)quote.Materials.Add(new QuoteMaterial{LegacyMaterialId=line.Item.Id,Name=line.Item.Name,Quantity=line.Quantity,UnitPrice=line.Item.UnitPrice,LineCost=decimal.Round(line.Cost,4,MidpointRounding.AwayFromZero)});
             db.Quotes.Add(quote);await db.SaveChangesAsync(ct);await transaction.CommitAsync(ct);
@@ -111,14 +111,14 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
                 .Include(x => x.Consumables)
                 .FirstOrDefaultAsync(x => x.Id == id, ct);
             if (quote is null) return NotFound();
-            if (quote.Sale is not null) return Conflict(new { message = "Esta cotización ya fue confirmada como venta." });
+            if (quote.Sale is not null) return Conflict(new { message = "Esta cotizacion ya fue confirmada como venta." });
 
             var usage = new List<(long Id, decimal Grams)>();
             foreach (var line in quote.Consumables)
             {
                 if (line.Grams <= 0) continue;
                 if (line.LegacyConsumableId <= 0)
-                    return Conflict(new { message = $"La cotización {quote.OrderCode} tiene un consumible sin referencia de inventario." });
+                    return Conflict(new { message = $"La cotizacion {quote.OrderCode} tiene un consumible sin referencia de inventario." });
                 var grams = decimal.Round(line.Grams * quote.Quantity, 4, MidpointRounding.AwayFromZero);
                 var index = usage.FindIndex(x => x.Id == line.LegacyConsumableId);
                 if (index < 0) usage.Add((line.LegacyConsumableId, grams));
@@ -131,12 +131,12 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             foreach (var required in usage)
             {
                 if (!inventory.TryGetValue(required.Id, out var item))
-                    return Conflict(new { message = "Uno de los filamentos de esta cotización ya no existe en el inventario." });
+                    return Conflict(new { message = "Uno de los filamentos de esta cotizacion ya no existe en el inventario." });
                 if (item.StockGrams + 0.0001m < required.Grams)
                     return Conflict(new
                     {
                         code = "INSUFFICIENT_STOCK",
-                        message = $"Stock insuficiente para {item.Name} · {item.Material} · {item.Color}. Disponible: {FormatWeight(item.StockGrams)}; necesario: {FormatWeight(required.Grams)}."
+                        message = $"Stock insuficiente para {item.Name} - {item.Material} - {item.Color}. Disponible: {FormatWeight(item.StockGrams)}; necesario: {FormatWeight(required.Grams)}."
                     });
             }
 
@@ -253,7 +253,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         sb.AppendLine("<tr class='spacer'><td colspan='10'></td></tr>");
         sb.AppendLine("</table>");
         sb.AppendLine("<table>");
-        sb.AppendLine("<tr class='head'><th>Código</th><th>Estado</th><th>Fecha</th><th>Cliente</th><th>Proyecto</th><th>Producto</th><th>Impresora</th><th>Peso g</th><th>Costo</th><th>Precio final</th><th>Ganancia</th></tr>");
+        sb.AppendLine("<tr class='head'><th>Codigo</th><th>Estado</th><th>Fecha</th><th>Cliente</th><th>Proyecto</th><th>Producto</th><th>Impresora</th><th>Peso g</th><th>Costo</th><th>Precio final</th><th>Ganancia</th></tr>");
         foreach (var x in rows)
         {
             var status = x.Sale is null ? "COTIZACION" : "VENDIDA";
@@ -299,13 +299,13 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         if (quote is null) return NotFound();
         var business = "Atlas Impresiones 3D";
         var config = await settings.GetAsync(ct);
-        return File(PdfVoucher(quote, business, config.CurrencySymbol), "application/pdf", $"cotización-{quote.OrderCode}.pdf");
+        return File(PdfVoucher(quote, business, config.CurrencySymbol), "application/pdf", $"cotizacion-{quote.OrderCode}.pdf");
     }
     private async Task<(Printer Printer,List<QuoteCalculator.ConsumableLine> Consumables,List<QuoteCalculator.MaterialLine> Materials)>Resolve(QuoteRequest request,CancellationToken ct)
     {
         var printer=await db.Printers.FirstOrDefaultAsync(x=>x.Id==request.PrinterId&&x.Active,ct)??throw new ArgumentException("Selecciona una impresora registrada antes de cotizar.");
-        var consumableIds=request.Consumables.Select(x=>x.ConsumableId).Distinct().ToArray();var available=await db.Consumables.Where(x=>consumableIds.Contains(x.Id)&&x.Active).ToDictionaryAsync(x=>x.Id,ct);var lots=await db.ConsumableStockLots.Where(x=>consumableIds.Contains(x.ConsumableId)).OrderBy(x=>x.ReceivedAtUtc).ThenBy(x=>x.Id).ToListAsync(ct);var remainingLots=available.ToDictionary(x=>x.Key,lotsForItem=>lots.Where(x=>x.ConsumableId==lotsForItem.Key).Select(x=>new StockPriceSegment(x.RemainingGrams,x.PricePerKilogram)).ToList());foreach(var item in available.Values)if(remainingLots[item.Id].Count==0&&item.StockGrams>0)remainingLots[item.Id].Add(new StockPriceSegment(item.StockGrams,item.PricePerUnit));var consumables=new List<QuoteCalculator.ConsumableLine>();foreach(var input in request.Consumables){if(!available.TryGetValue(input.ConsumableId,out var item))throw new ArgumentException("Uno de los consumibles no existe o está archivado.");if(item.StockGrams<=0)throw new ArgumentException($"No hay existencia de {item.Name} · {item.Material} · {item.Color}.");var itemLots=remainingLots[item.Id];var required=input.Grams*request.Quantity;if(itemLots.Sum(x=>x.Grams)+0.0001m<required)throw new ArgumentException($"Stock insuficiente para {item.Name} · {item.Material} · {item.Color}.");var cost=CostFor(itemLots,required);RemoveFrom(itemLots,required);consumables.Add(new(item,input.Grams,cost/request.Quantity));}
-        var materialIds=request.Materials.Select(x=>x.MaterialId).Distinct().ToArray();var materialCatalog=await db.Materials.Where(x=>materialIds.Contains(x.Id)&&x.Active).ToDictionaryAsync(x=>x.Id,ct);var materials=new List<QuoteCalculator.MaterialLine>();foreach(var input in request.Materials){if(!materialCatalog.TryGetValue(input.MaterialId,out var item))throw new ArgumentException("Uno de los materiales no existe o está archivado.");materials.Add(new(item,input.Quantity));}
+        var consumableIds=request.Consumables.Select(x=>x.ConsumableId).Distinct().ToArray();var available=await db.Consumables.Where(x=>consumableIds.Contains(x.Id)&&x.Active).ToDictionaryAsync(x=>x.Id,ct);var lots=await db.ConsumableStockLots.Where(x=>consumableIds.Contains(x.ConsumableId)).OrderBy(x=>x.ReceivedAtUtc).ThenBy(x=>x.Id).ToListAsync(ct);var remainingLots=available.ToDictionary(x=>x.Key,lotsForItem=>lots.Where(x=>x.ConsumableId==lotsForItem.Key).Select(x=>new StockPriceSegment(x.RemainingGrams,x.PricePerKilogram)).ToList());foreach(var item in available.Values)if(remainingLots[item.Id].Count==0&&item.StockGrams>0)remainingLots[item.Id].Add(new StockPriceSegment(item.StockGrams,item.PricePerUnit));var consumables=new List<QuoteCalculator.ConsumableLine>();foreach(var input in request.Consumables){if(!available.TryGetValue(input.ConsumableId,out var item))throw new ArgumentException("Uno de los consumibles no existe o est archivado.");if(item.StockGrams<=0)throw new ArgumentException($"No hay existencia de {item.Name} - {item.Material} - {item.Color}.");var itemLots=remainingLots[item.Id];var required=input.Grams*request.Quantity;if(itemLots.Sum(x=>x.Grams)+0.0001m<required)throw new ArgumentException($"Stock insuficiente para {item.Name} - {item.Material} - {item.Color}.");var cost=CostFor(itemLots,required);RemoveFrom(itemLots,required);consumables.Add(new(item,input.Grams,cost/request.Quantity));}
+        var materialIds=request.Materials.Select(x=>x.MaterialId).Distinct().ToArray();var materialCatalog=await db.Materials.Where(x=>materialIds.Contains(x.Id)&&x.Active).ToDictionaryAsync(x=>x.Id,ct);var materials=new List<QuoteCalculator.MaterialLine>();foreach(var input in request.Materials){if(!materialCatalog.TryGetValue(input.MaterialId,out var item))throw new ArgumentException("Uno de los materiales no existe o est archivado.");materials.Add(new(item,input.Quantity));}
         return(printer,consumables,materials);
     }
     private sealed record StockPriceSegment(decimal Grams, decimal Price);
@@ -371,14 +371,14 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             Image(50, 752, 66, 56);
         }
         Text("F2", 26, 143, 790, businessName, .02m, .31m, .29m);
-        Text("F1", 11, 145, 770, "Comprobante profesional de cotización", .20m, .46m, .43m);
+        Text("F1", 11, 145, 770, "Comprobante profesional de cotizacion", .20m, .46m, .43m);
         Fill(1, 1, 1); Rect(407, 756, 130, 48);
         Stroke(.72m, .88m, .84m); Rect(407, 756, 130, 48, true);
         Text("F2", 10, 421, 786, quote.Sale is null ? "COTIZACION" : "VENTA CONFIRMADA", .02m, .41m, .37m);
-        Text("F1", 8.5m, 421, 771, $"Código: {quote.OrderCode}", .22m, .37m, .35m);
+        Text("F1", 8.5m, 421, 771, $"Codigo: {quote.OrderCode}", .22m, .37m, .35m);
         Text("F1", 8.5m, 421, 759, $"Fecha: {quote.CreatedAtUtc:yyyy-MM-dd HH:mm}", .22m, .37m, .35m);
 
-        InfoCard(42, 574, 248, "DATOS DEL CLIENTE", ("Cliente", quote.Customer), ("Celular", string.IsNullOrWhiteSpace(quote.CustomerPhone) ? "Sin registrar" : quote.CustomerPhone), ("Estado", quote.Sale is null ? "Cotización" : "Venta confirmada"));
+        InfoCard(42, 574, 248, "DATOS DEL CLIENTE", ("Cliente", quote.Customer), ("Celular", string.IsNullOrWhiteSpace(quote.CustomerPhone) ? "Sin registrar" : quote.CustomerPhone), ("Estado", quote.Sale is null ? "Cotizacion" : "Venta confirmada"));
         InfoCard(305, 574, 248, "DETALLE DEL TRABAJO", ("Proyecto", quote.ProjectName), ("Producto", string.IsNullOrWhiteSpace(quote.ProductName) ? "Pieza personalizada" : quote.ProductName), ("Impresora", quote.PrinterName));
 
         Fill(.98m, 1, .995m); Rect(42, 512, 511, 42);
@@ -402,7 +402,9 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         Row("Consumibles", quote.MaterialCost);
         Row("Electricidad", quote.ElectricityCost, shade: true);
         Row("Mantenimiento", quote.MaintenanceCost);
-        Row("Adicionales y extras", quote.AdditionalCost, shade: true);
+        Row("Preparacion, empaque, transporte y extras", quote.AdditionalCost, shade: true);
+        Row("Salarios", quote.LaborCost);
+        Row("Merma y administracion", quote.FunctionalSurcharge, shade: true);
         Row("Subtotal de costos", quote.Subtotal, true);
         Row("Ganancia", quote.ProfitAmount, shade: true);
         Row("Impuesto", quote.TaxAmount);
@@ -425,7 +427,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         }
 
         Stroke(.72m, .88m, .84m); Line(42, 70, 553, 70);
-        Text("F1", 8, 42, 52, "Este documento corresponde a una cotización y no reemplaza una factura fiscal.", .34m, .43m, .41m);
+        Text("F1", 8, 42, 52, "Este documento corresponde a una cotizacion y no reemplaza una factura fiscal.", .34m, .43m, .41m);
         Text("F2", 9, 377, 52, "Gracias por confiar en Atlas Impresiones 3D", .02m, .41m, .37m);
 
         var stream = content.ToString();
@@ -586,14 +588,3 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
     private static string Initial(string value){foreach(char c in value.Trim().Normalize(System.Text.NormalizationForm.FormD)){if(System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)==UnicodeCategory.NonSpacingMark||!char.IsLetterOrDigit(c))continue;return char.ToUpperInvariant(c).ToString();}return"X";}
     private static string Csv(string value)=>$"\"{value.Replace("\"","\"\"")}\"";
 }
-
-
-
-
-
-
-
-
-
-
-

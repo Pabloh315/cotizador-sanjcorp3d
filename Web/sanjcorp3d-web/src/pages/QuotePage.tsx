@@ -1,16 +1,16 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Calculator, CheckCircle2, Download, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import type { BusinessSettings, Consumable, ConsumableUsage, ExtraMaterial, MaterialUsage, Printer, ProductCatalog, QuoteCalculation, QuoteRequest, QuoteSummary } from '../types'
 import { Empty, ErrorMessage, Loading, PageHeader, SuccessMessage, money, number, weight } from '../ui'
 import { confirmDialog } from '../confirm'
 
-type BaseForm = { customer: string; customerPhone: string; projectName: string; printerId: number; hours: number; minutes: number; quantity: number; additionalManualCost: number; workExtraPercent: number; profitMultiplier: number; notes: string }
-const emptyForm: BaseForm = { customer: '', customerPhone: '', projectName: '', printerId: 0, hours: 0, minutes: 0, quantity: 1, additionalManualCost: 0, workExtraPercent: 0, profitMultiplier: 3, notes: '' }
+type BaseForm = { customer: string; customerPhone: string; projectName: string; printerId: number; hours: number; minutes: number; quantity: number; additionalManualCost: number; workExtraPercent: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; transportCost: number; profitMultiplier: number; notes: string }
+const emptyForm: BaseForm = { customer: '', customerPhone: '', projectName: '', printerId: 0, hours: 0, minutes: 0, quantity: 1, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: 6, preparationPercent: 10, laborPercent: 20, wastePercent: 7, overheadPercent: 5, packagingCost: 0, transportCost: 0, profitMultiplier: 1.4, notes: '' }
 type ProfitCostLine = { id: string; name: string; percent: number; fixed?: boolean }
 const defaultProfitCosts: ProfitCostLine[] = [
   { id: 'salary', name: 'Costos de salarios', percent: 0, fixed: true },
-  { id: 'debt', name: 'Costos de inversi?n o deudas', percent: 0, fixed: true },
+  { id: 'debt', name: 'Costos de inversion o deudas', percent: 0, fixed: true },
   { id: 'manual', name: 'Costo manual', percent: 0, fixed: true },
   { id: 'work', name: 'Adicional del trabajo', percent: 0, fixed: true },
 ]
@@ -51,7 +51,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       .then(([printerItems, consumableItems, materialItems, configuration, productItems]) => {
         const availablePrinters = printerItems.filter(x => x.active)
         setPrinters(availablePrinters); setConsumables(consumableItems); setMaterials(materialItems); setSettings(configuration); setProducts(productItems)
-        setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: configuration.defaultProfitMultiplier }))
+        setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: configuration.defaultProfitMultiplier, maintenancePercent: configuration.maintenancePercent, preparationPercent: configuration.preparationPercent, laborPercent: configuration.laborPercent, wastePercent: configuration.wastePercent, overheadPercent: configuration.overheadPercent, packagingCost: configuration.packagingCost, transportCost: configuration.transportCost }))
         setSelectedConsumable(consumableItems.find(x => x.isDefault)?.id ?? consumableItems[0]?.id ?? 0)
         setSelectedMaterial(materialItems[0]?.id ?? 0)
       })
@@ -96,7 +96,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   function addConsumable() {
     const item = consumableById.get(selectedConsumable)
     if (!item || grams <= 0) { setError('Selecciona un consumible e indica gramos mayores que cero.'); return }
-    if ((item.stockGrams ?? item.stockQuantity * 1000) <= 0) { setError(`No hay existencia de ${item.name} · ${item.material} · ${item.color}. Actualiza su inventario primero.`); return }
+    if ((item.stockGrams ?? item.stockQuantity * 1000) <= 0) { setError(`No hay existencia de ${item.name} - ${item.material} - ${item.color}. Actualiza su inventario primero.`); return }
     setConsumableLines(current => [...current, { consumableId: item.id, grams }]); setGrams(0); setError(''); invalidate()
   }
 
@@ -106,7 +106,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   }
 
   function request(): QuoteRequest {
-    return { customer: form.customer, customerPhone: form.customerPhone, projectName: form.projectName, productName: selectedProduct, printerId: form.printerId, printHours: form.hours + form.minutes / 60, quantity: form.quantity, additionalManualCost: profitAdditionalCost, profitMultiplier: form.profitMultiplier, notes: form.notes, consumables: consumableLines, materials: materialLines }
+    return { customer: form.customer, customerPhone: form.customerPhone, projectName: form.projectName, productName: selectedProduct, printerId: form.printerId, printHours: form.hours + form.minutes / 60, quantity: form.quantity, additionalManualCost: profitAdditionalCost, profitMultiplier: form.profitMultiplier, notes: form.notes, consumables: consumableLines, materials: materialLines, maintenancePercent: form.maintenancePercent, preparationPercent: form.preparationPercent, laborPercent: form.laborPercent, wastePercent: form.wastePercent, overheadPercent: form.overheadPercent, packagingCost: form.packagingCost, transportCost: form.transportCost }
   }
 
   async function calculate() {
@@ -123,14 +123,14 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       const payload = request()
       const [result, totals] = await Promise.all([api.createQuote(payload), api.calculateQuote(payload)])
       const finalPrice = customPrice > 0 ? (await api.updateQuotePrice(result.id, customPrice)).recommendedPrice : result.recommendedPrice
-      setSaved({ ...result, recommendedPrice: finalPrice }); setCalculation(totals); setSuccess(`Cotización ${result.orderCode} guardada correctamente.`)
+      setSaved({ ...result, recommendedPrice: finalPrice }); setCalculation(totals); setSuccess(`Cotizacion ${result.orderCode} guardada correctamente.`)
     } catch (reason) { setError((reason as Error).message) }
     finally { setBusy(false) }
   }
 
   async function confirmSale() {
     if (!saved) return
-    if (!await confirmDialog({ title: 'Confirmar venta', message: 'Se registrará la venta y se descontará el filamento del inventario.', highlight: `${saved.orderCode} · ${money(saved.recommendedPrice, settings?.currencySymbol)}`, confirmLabel: 'Sí, confirmar', variant: 'success' })) return
+    if (!await confirmDialog({ title: 'Confirmar venta', message: 'Se registrar la venta y se descontar el filamento del inventario.', highlight: `${saved.orderCode} - ${money(saved.recommendedPrice, settings?.currencySymbol)}`, confirmLabel: 'S, confirmar', variant: 'success' })) return
     setBusy(true); setError('')
     try { await api.confirmSale(saved.id); setSold(true); setSuccess('Venta confirmada y filamento descontado del inventario.'); window.dispatchEvent(new Event('inventory-changed')) }
     catch (reason) { setError((reason as Error).message) }
@@ -150,42 +150,42 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       const source = await api.quote(id)
       const totalMinutes = Math.round(source.printHours * 60)
       const printer = printers.find(item => item.name === source.printerName)
-      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, profitMultiplier: source.profitMultiplier, notes: source.notes })
+      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: settings?.transportCost ?? 0, profitMultiplier: source.profitMultiplier, notes: source.notes })
       setSelectedProduct(source.productName ?? '')
       setConsumableLines(source.consumables.filter(line => consumableById.has(line.legacyConsumableId)).map(line => ({ consumableId: line.legacyConsumableId, grams: line.grams })))
       setMaterialLines(source.materials.filter(line => materialById.has(line.legacyMaterialId)).map(line => ({ materialId: line.legacyMaterialId, quantity: line.quantity })))
-      setCalculation({ totalWeight: source.totalWeight, materialCost: source.materialCost, electricityCost: source.electricityCost, maintenanceCost: source.maintenanceCost, additionalCost: source.additionalCost, subtotal: source.subtotal, profitAmount: source.profitAmount, taxAmount: source.taxAmount, recommendedPrice: source.recommendedPrice })
+      setCalculation({ totalWeight: source.totalWeight, materialCost: source.materialCost, electricityCost: source.electricityCost, maintenanceCost: source.maintenanceCost, preparationCost: 0, laborCost: source.laborCost, wasteCost: 0, overheadCost: source.functionalSurcharge, packagingCost: 0, transportCost: 0, additionalCost: source.additionalCost, subtotal: source.subtotal, profitAmount: source.profitAmount, taxAmount: source.taxAmount, recommendedPrice: source.recommendedPrice })
       setCustomPrice(source.recommendedPrice); setSaved(undefined); setSold(false); setSearchOpen(false); setProfitCosts(defaultProfitCosts)
-      setSuccess(`Datos de ${source.orderCode} cargados como una nueva cotización. Puedes modificarlos antes de guardar.`)
+      setSuccess(`Datos de ${source.orderCode} cargados como una nueva cotizacion. Puedes modificarlos antes de guardar.`)
     } catch (reason) { setError((reason as Error).message) }
     finally { setBusy(false) }
   }
 
   function clear() {
-    setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: settings?.defaultProfitMultiplier ?? 3 })
+    setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: settings?.defaultProfitMultiplier ?? 1.4, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: settings?.transportCost ?? 0 })
     setProfitCosts(defaultProfitCosts); setNewProfitCostName(''); setNewProfitCostPercent(0)
     setConsumableLines([]); setMaterialLines([]); setCalculation(undefined); setSaved(undefined); setSold(false); setSelectedProduct(''); setCustomPrice(0); setError(''); setSuccess('')
   }
 
-  if (loading) return <Loading label="Cargando catálogos…" />
-  if (!canWrite) return <><PageHeader eyebrow="COTIZADOR" title="Nueva cotización" description="Cálculo de costos y precio recomendado." /><div className="panel locked-panel"><h2>Acceso de consulta</h2><p>Tu rol puede revisar el historial, pero no crear cotizaciones. Solicita al administrador el rol Ventas si necesitas esta función.</p></div></>
+  if (loading) return <Loading label="Cargando catalogos" />
+  if (!canWrite) return <><PageHeader eyebrow="COTIZADOR" title="Nueva cotizacion" description="Clculo de costos y precio recomendado." /><div className="panel locked-panel"><h2>Acceso de consulta</h2><p>Tu rol puede revisar el historial, pero no crear cotizaciones. Solicita al administrador el rol Ventas si necesitas esta funcin.</p></div></>
 
   return <>
-    <PageHeader eyebrow="COTIZADOR 3D" title="Nueva cotización" description="Registra los datos de impresión, combina consumibles y obtén el precio con la fórmula original." actions={<button className="secondary" onClick={() => { setSearchOpen(value => !value); if (!searchOpen && searchResults.length === 0) void searchExisting() }}><Search size={17} />Buscar cotización o venta</button>} />
+    <PageHeader eyebrow="COTIZADOR 3D" title="Nueva cotizacion" description="Registra los datos de impresin, combina consumibles y obtn el precio con la frmula original." actions={<button className="secondary" onClick={() => { setSearchOpen(value => !value); if (!searchOpen && searchResults.length === 0) void searchExisting() }}><Search size={17} />Buscar cotizacion o venta</button>} />
     <ErrorMessage error={error} /><SuccessMessage message={success} />
-    {searchOpen && <section className="panel quote-search-panel"><div className="section-title"><div><p className="eyebrow">REUTILIZAR DATOS</p><h2>Buscar cotizaciones y ventas</h2></div><button className="icon ghost" onClick={() => setSearchOpen(false)}><X size={18} /></button></div><div className="inline-form"><label className="search-field"><Search size={17} /><input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void searchExisting() } }} placeholder="Código, cliente o producto…" /></label><button onClick={searchExisting} disabled={searching}>{searching ? 'Buscando…' : 'Buscar'}</button></div>{searching ? <Loading label="Buscando…" /> : searchResults.length === 0 ? <Empty>No se encontraron registros.</Empty> : <div className="line-list quote-search-results">{searchResults.map(item => <div className="line-item" key={item.id}><div><strong>{item.customer} · {item.productName || item.projectName}</strong><small>{item.orderCode} · {item.soldAtUtc ? 'Venta confirmada' : 'Cotización pendiente'} · {money(item.recommendedPrice, settings?.currencySymbol)}</small></div><button onClick={() => loadExisting(item.id)}>Cargar como nueva</button></div>)}</div>}</section>}
+    {searchOpen && <section className="panel quote-search-panel"><div className="section-title"><div><p className="eyebrow">REUTILIZAR DATOS</p><h2>Buscar cotizaciones y ventas</h2></div><button className="icon ghost" onClick={() => setSearchOpen(false)}><X size={18} /></button></div><div className="inline-form"><label className="search-field"><Search size={17} /><input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void searchExisting() } }} placeholder="Codigo, cliente o producto" /></label><button onClick={searchExisting} disabled={searching}>{searching ? 'Buscando' : 'Buscar'}</button></div>{searching ? <Loading label="Buscando" /> : searchResults.length === 0 ? <Empty>No se encontraron registros.</Empty> : <div className="line-list quote-search-results">{searchResults.map(item => <div className="line-item" key={item.id}><div><strong>{item.customer} - {item.productName || item.projectName}</strong><small>{item.orderCode} - {item.soldAtUtc ? 'Venta confirmada' : 'Cotizacion pendiente'} - {money(item.recommendedPrice, settings?.currencySymbol)}</small></div><button onClick={() => loadExisting(item.id)}>Cargar como nueva</button></div>)}</div>}</section>}
     {printers.length === 0 ? <div className="alert error">Registra al menos una impresora disponible antes de cotizar.</div> : null}
     {consumables.length === 0 ? <div className="alert error">Necesitas al menos un consumible activo antes de cotizar.</div> : null}
     <div className="quote-layout">
       <div className="form-stack">
         <section className="panel">
-          <div className="section-title"><div><span className="step">01</span><h2>Proyecto e impresión</h2></div></div>
+          <div className="section-title"><div><span className="step">01</span><h2>Proyecto e impresin</h2></div></div>
           <div className="form-grid two">
             <label>Cliente<input value={form.customer} onChange={e => update('customer', e.target.value)} placeholder="Nombre del cliente" /></label>
             <label>Celular del cliente <small>(solo al guardar)</small><input value={form.customerPhone} onChange={e => update('customerPhone', e.target.value)} placeholder="70000000" inputMode="tel" /></label>
             <label>Pieza o proyecto<input value={form.projectName} onChange={e => update('projectName', e.target.value)} placeholder="Ej. Soporte personalizado" /></label>
-            <label>Producto a la venta<select value={selectedProduct} onChange={e => { setSelectedProduct(e.target.value); invalidate() }}><option value="">Producto personalizado…</option>{products.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
-            <label className="span-2">Impresora<select value={form.printerId} onChange={e => update('printerId', Number(e.target.value))}>{printers.map(x => <option key={x.id} value={x.id}>{x.name} · {x.status} · {x.buildX}x{x.buildY}x{x.buildZ} mm · {x.colorCount ?? 1} color{(x.colorCount ?? 1) === 1 ? '' : 'es'}</option>)}</select></label>
+            <label>Producto a la venta<select value={selectedProduct} onChange={e => { setSelectedProduct(e.target.value); invalidate() }}><option value="">Producto personalizado</option>{products.map(item => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label>
+            <label className="span-2">Impresora<select value={form.printerId} onChange={e => update('printerId', Number(e.target.value))}>{printers.map(x => <option key={x.id} value={x.id}>{x.name} - {x.status} - {x.buildX}x{x.buildY}x{x.buildZ} mm - {x.colorCount ?? 1} color{(x.colorCount ?? 1) === 1 ? '' : 'es'}</option>)}</select></label>
             <label>Horas<input type="number" min="0" step="1" value={form.hours} onChange={e => update('hours', Number(e.target.value))} /></label>
             <label>Minutos<input type="number" min="0" max="59" step="1" value={form.minutes} onChange={e => update('minutes', Number(e.target.value))} /></label>
             <label>Cantidad de piezas<input type="number" min="1" step="1" value={form.quantity} onChange={e => update('quantity', Number(e.target.value))} /></label>
@@ -195,26 +195,26 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
         <section className="panel">
           <div className="section-title"><div><span className="step">02</span><h2>Filamentos y resinas</h2></div></div>
           <div className="inline-form consumable-picker">
-            <label>Consumible<select value={selectedConsumable} onChange={e => setSelectedConsumable(Number(e.target.value))}>{consumables.map(x => <option key={x.id} value={x.id}>{x.name} · {x.material} · {x.color} · {weight(x.stockGrams ?? x.stockQuantity * 1000)} disp.</option>)}</select></label>
+            <label>Consumible<select value={selectedConsumable} onChange={e => setSelectedConsumable(Number(e.target.value))}>{consumables.map(x => <option key={x.id} value={x.id}>{x.name} - {x.material} - {x.color} - {weight(x.stockGrams ?? x.stockQuantity * 1000)} disp.</option>)}</select></label>
             <label>Gramos<input list="common-grams" type="number" min="0.01" step="0.01" value={grams} onChange={e => setGrams(Number(e.target.value))} /></label><datalist id="common-grams"><option value="50" /><option value="100" /><option value="150" /><option value="200" /><option value="250" /><option value="300" /><option value="500" /><option value="750" /><option value="1000" /></datalist>
             <button type="button" onClick={addConsumable}><Plus size={17} />Agregar</button>
           </div>
           {consumableLines.length === 0 ? <Empty>Agrega al menos un filamento o resina.</Empty> : <div className="line-list">{consumableLines.map((line, index) => {
             const item = consumableById.get(line.consumableId)
-            return <div className="line-item" key={`${line.consumableId}-${index}`}><span className="color-dot" style={{ background: item?.color.toLowerCase() }} /><div><strong>{item?.name} · {item?.material}</strong><small>{item?.category} · {item?.color}</small></div><b>{number(line.grams)} g</b><button className="icon danger" aria-label="Quitar" onClick={() => { setConsumableLines(current => current.filter((_, i) => i !== index)); invalidate() }}><Trash2 size={16} /></button></div>
+            return <div className="line-item" key={`${line.consumableId}-${index}`}><span className="color-dot" style={{ background: item?.color.toLowerCase() }} /><div><strong>{item?.name} - {item?.material}</strong><small>{item?.category} - {item?.color}</small></div><b>{number(line.grams)} g</b><button className="icon danger" aria-label="Quitar" onClick={() => { setConsumableLines(current => current.filter((_, i) => i !== index)); invalidate() }}><Trash2 size={16} /></button></div>
           })}</div>}
         </section>
 
         <section className="panel">
           <div className="section-title"><div><span className="step">03</span><h2>Materiales adicionales</h2></div></div>
           <div className="inline-form material-picker">
-            <label>Material<select value={selectedMaterial} onChange={e => setSelectedMaterial(Number(e.target.value))}><option value={0}>Seleccionar…</option>{materials.map(x => <option key={x.id} value={x.id}>{x.name} · {money(x.unitPrice, settings?.currencySymbol)}/{x.unit}</option>)}</select></label>
+            <label>Material<select value={selectedMaterial} onChange={e => setSelectedMaterial(Number(e.target.value))}><option value={0}>Seleccionar</option>{materials.map(x => <option key={x.id} value={x.id}>{x.name} - {money(x.unitPrice, settings?.currencySymbol)}/{x.unit}</option>)}</select></label>
             <label>Cantidad<input type="number" min="0.01" step="0.01" value={materialQuantity} onChange={e => setMaterialQuantity(Number(e.target.value))} /></label>
             <button type="button" className="secondary" onClick={addMaterial}><Plus size={17} />Agregar</button>
           </div>
-          {materialLines.length > 0 && <div className="line-list">{materialLines.map((line, index) => { const item = materialById.get(line.materialId); return <div className="line-item" key={`${line.materialId}-${index}`}><div><strong>{item?.name}</strong><small>{item?.category} · {item?.unit}</small></div><b>{number(line.quantity)} × {money(item?.unitPrice ?? 0, settings?.currencySymbol)}</b><button className="icon danger" aria-label="Quitar" onClick={() => { setMaterialLines(current => current.filter((_, i) => i !== index)); invalidate() }}><Trash2 size={16} /></button></div> })}</div>}
+          {materialLines.length > 0 && <div className="line-list">{materialLines.map((line, index) => { const item = materialById.get(line.materialId); return <div className="line-item" key={`${line.materialId}-${index}`}><div><strong>{item?.name}</strong><small>{item?.category} - {item?.unit}</small></div><b>{number(line.quantity)}  {money(item?.unitPrice ?? 0, settings?.currencySymbol)}</b><button className="icon danger" aria-label="Quitar" onClick={() => { setMaterialLines(current => current.filter((_, i) => i !== index)); invalidate() }}><Trash2 size={16} /></button></div> })}</div>}
           <div className="form-grid two compact-fields">
-            <label className="span-2">Notas<textarea rows={3} value={form.notes} onChange={e => update('notes', e.target.value)} placeholder="Acabados, entrega, observaciones…" /></label>
+            <label className="span-2">Notas<textarea rows={3} value={form.notes} onChange={e => update('notes', e.target.value)} placeholder="Acabados, entrega, observaciones" /></label>
           </div>
         </section>
 
@@ -224,7 +224,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
             <label>Multiplicador de ganancia<input type="number" min="1" step="0.01" value={form.profitMultiplier} onChange={e => update('profitMultiplier', Number(e.target.value))} /></label>
             <label>Total de costos porcentuales<input type="number" value={profitPercentTotal.toFixed(2)} disabled /></label>
           </div>
-          <div className="profit-costs">
+          <div className="form-grid three compact-fields"><label>Mantenimiento (%)<input type="number" min="0" step="0.01" value={form.maintenancePercent} onChange={e => update('maintenancePercent', Number(e.target.value))} /></label><label>Preparacin (%)<input type="number" min="0" step="0.01" value={form.preparationPercent} onChange={e => update('preparationPercent', Number(e.target.value))} /></label><label>Salarios (%)<input type="number" min="0" step="0.01" value={form.laborPercent} onChange={e => update('laborPercent', Number(e.target.value))} /></label><label>Merma/fallos (%)<input type="number" min="0" step="0.01" value={form.wastePercent} onChange={e => update('wastePercent', Number(e.target.value))} /></label><label>Administracin/energa extra (%)<input type="number" min="0" step="0.01" value={form.overheadPercent} onChange={e => update('overheadPercent', Number(e.target.value))} /></label><label>Empaque por pieza<input type="number" min="0" step="0.01" value={form.packagingCost} onChange={e => update('packagingCost', Number(e.target.value))} /></label><label>Transporte<input type="number" min="0" step="0.01" value={form.transportCost} onChange={e => update('transportCost', Number(e.target.value))} /></label></div><div className="profit-costs">
             {profitCosts.map(line => <div className="profit-cost-row" key={line.id}><label>{line.name}<input type="number" min="0" max="100" step="0.01" value={line.percent} onChange={e => updateProfitCost(line.id, Number(e.target.value))} /></label><span>%</span>{!line.fixed && <button className="icon ghost danger-text" type="button" aria-label="Quitar" onClick={() => removeProfitCost(line.id)}><Trash2 size={16} /></button>}</div>)}
           </div>
           <div className="inline-form profit-cost-add">
@@ -251,10 +251,10 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
             <div><dt>Impuesto</dt><dd>{money(calculation.taxAmount, settings?.currencySymbol)}</dd></div>
           </dl>
         </>}
-        {saved && <div className="saved-ticket"><CheckCircle2 size={19} /><div><small>Código guardado</small><strong>{saved.orderCode}</strong></div><StatusSale sold={sold} /><button className="icon ghost" title="Descargar comprobante PDF" onClick={() => api.downloadVoucher(saved.id).catch(reason => setError((reason as Error).message))}><Download size={16} /></button></div>}
+        {saved && <div className="saved-ticket"><CheckCircle2 size={19} /><div><small>Codigo guardado</small><strong>{saved.orderCode}</strong></div><StatusSale sold={sold} /><button className="icon ghost" title="Descargar comprobante PDF" onClick={() => api.downloadVoucher(saved.id).catch(reason => setError((reason as Error).message))}><Download size={16} /></button></div>}
         <div className="summary-actions">
           <button className="secondary" disabled={busy || printers.length === 0 || consumables.length === 0} onClick={calculate}><Calculator size={17} />Calcular precio</button>
-          <button disabled={busy || printers.length === 0 || consumables.length === 0} onClick={save}><Save size={17} />Guardar cotización</button>
+          <button disabled={busy || printers.length === 0 || consumables.length === 0} onClick={save}><Save size={17} />Guardar cotizacion</button>
           {saved && !sold && <button className="sale-button" disabled={busy} onClick={confirmSale}><ShoppingBag size={17} />Confirmar venta</button>}
           <button className="ghost" disabled={busy} onClick={clear}><RotateCcw size={16} />Limpiar</button>
         </div>
@@ -264,8 +264,3 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
 }
 
 function StatusSale({ sold }: { sold: boolean }) { return <span className={`status ${sold ? 'ok' : 'warning'}`}>{sold ? 'VENDIDA' : 'PENDIENTE'}</span> }
-
-
-
-
-
