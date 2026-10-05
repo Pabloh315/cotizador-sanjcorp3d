@@ -121,12 +121,13 @@ export function StoreProductsPage({ canManage }: { canManage: boolean }) {
     setLineProduct(null); setLineQuantity(1); setError('')
   }
 
-  function finishQuote() {
+  async function finishQuote() {
     if (!quoteInfo.customer.trim()) { setError('Escribe el nombre del cliente.'); return }
     if (!quoteInfo.phone.trim()) { setError('Escribe el telefono del cliente.'); return }
     if (!quoteInfo.description.trim()) { setError('Escribe una descripcion de la cotizacion.'); return }
     if (!quoteInfo.address.trim()) { setError('Escribe la direccion de entrega.'); return }
     if (cartLines.length === 0) { setError('Agrega al menos un producto al carrito.'); return }
+    if (!await confirmDialog({ title: 'Terminar cotizacion', message: 'Se cerrara este carrito y pasara a Cotizaciones tienda para calcular, guardar o confirmar la venta.', highlight: `${quoteInfo.customer} - ${cartLines.length} productos`, confirmLabel: 'Si, terminar', variant: 'success' })) return
     const cart: StoreCart = { id: `${Date.now()}`, createdAt: new Date().toISOString(), info: quoteInfo, lines: cartLines }
     const current = JSON.parse(sessionStorage.getItem(cartKey) ?? '[]') as StoreCart[]
     sessionStorage.setItem(cartKey, JSON.stringify([cart, ...current].slice(0, 20)))
@@ -161,6 +162,6 @@ export function StoreProductsPage({ canManage }: { canManage: boolean }) {
         <div className="editor-actions"><button type="button" className="ghost" onClick={() => setDraft(null)}>Cancelar</button><button disabled={busy}>{busy ? 'Guardando...' : 'Guardar producto'}</button></div>
       </form>}
     </div>
-    {lineProduct && <div className="drawer-backdrop"><form className="detail-drawer" onSubmit={addLine}><div className="section-title"><div><p className="eyebrow">AGREGAR AL CARRITO</p><h2>{lineProduct.name}</h2></div><button type="button" className="icon ghost" onClick={() => setLineProduct(null)}><X size={18} /></button></div><div className="form-grid two"><label>Cantidad<input type="number" min="1" step="1" value={lineQuantity} onChange={e => setLineQuantity(Number(e.target.value))} /></label><label>Material solicitado<select value={lineMaterial} onChange={e => setLineMaterial(e.target.value)}>{materialOptions.map(value => <option key={value} value={value}>{value}</option>)}</select></label></div><div className="breakdown"><div><dt>Filamento</dt><dd>{weight(lineProduct.filamentGrams * lineQuantity)}</dd></div><div><dt>Precio estimado</dt><dd>{money(finalUnitPrice(lineProduct, lineMaterial) * lineQuantity, settings?.currencySymbol)}</dd></div></div><div className="editor-actions"><button type="button" className="ghost" onClick={() => setLineProduct(null)}>Cancelar</button><button><Plus size={17} />Agregar</button></div></form></div>}
+    {lineProduct && <div className="confirm-overlay"><form className="confirm-dialog store-product-modal" onSubmit={addLine}><button type="button" className="confirm-close icon ghost" onClick={() => setLineProduct(null)}><X size={18} /></button><div className="confirm-icon"><ShoppingCart size={24} /></div><p className="eyebrow">AGREGAR AL CARRITO</p><h2>{lineProduct.name}</h2>{lineProduct.description && <p>{lineProduct.description}</p>}<div className="form-grid two"><label>Cantidad<input type="number" min="1" step="1" value={lineQuantity} onChange={e => setLineQuantity(Number(e.target.value))} /></label><label>Material solicitado<select value={lineMaterial} onChange={e => setLineMaterial(e.target.value)}>{materialOptions.map(value => <option key={value} value={value}>{value}</option>)}</select></label></div><dl className="breakdown"><div><dt>Filamento por unidad</dt><dd>{weight(lineProduct.filamentGrams)}</dd></div><div><dt>Filamento total</dt><dd>{weight(lineProduct.filamentGrams * lineQuantity)}</dd></div><div><dt>Tiempo estimado</dt><dd>{number(lineProduct.productionMinutes * lineQuantity)} min</dd></div><div><dt>Ganancia registrada</dt><dd>x{number(lineProduct.profitMultiplier)}</dd></div><div><dt>Precio estimado</dt><dd>{money(finalUnitPrice(lineProduct, lineMaterial) * lineQuantity, settings?.currencySymbol)}</dd></div></dl><div className="confirm-actions"><button type="button" className="ghost" onClick={() => setLineProduct(null)}>Cancelar</button><button><Plus size={17} />Agregar al carrito</button></div></form></div>}
   </>
 }
