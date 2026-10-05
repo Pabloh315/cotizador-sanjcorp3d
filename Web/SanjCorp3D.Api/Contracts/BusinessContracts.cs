@@ -38,7 +38,7 @@ public sealed record UpdateTenantRequest(string Name, string? LogoUrl, bool Acti
 public sealed record CreateMakerUserRequest(string Username, string DisplayName, string? Email, string Password);
 public sealed record ProductCatalogDto(long Id, string Name, string Description, string MaterialType, decimal FilamentGrams, decimal MaterialCost, decimal ProductionMinutes, decimal ProfitMultiplier, bool Active);
 public sealed record CreateProductRequest(string Name, string? Description = null, string? MaterialType = null, decimal FilamentGrams = 0, decimal MaterialCost = 0, decimal ProductionMinutes = 0, decimal ProfitMultiplier = 1.4m);
-public sealed record StoreQuoteLineRequest(long ProductId, int Quantity);
+public sealed record StoreQuoteLineRequest(long ProductId, int Quantity, string? MaterialType = null);
 public sealed record StoreQuoteRequest(string Customer, string? CustomerPhone, string? ProjectName, IReadOnlyList<long> PrinterIds, string? Notes, IReadOnlyList<StoreQuoteLineRequest> Lines);
 public sealed record StoreQuoteCalculationDto(decimal TotalQuantity, decimal PrintHours, decimal MaterialCost, decimal ElectricityCost, decimal MaintenanceCost, decimal PreparationCost, decimal LaborCost, decimal WasteCost, decimal OverheadCost, decimal PackagingCost, decimal TransportCost, decimal Subtotal, decimal ProfitAmount, decimal TaxAmount, decimal RecommendedPrice);
 public sealed record InventoryLossRequest(decimal Grams, string Reason);

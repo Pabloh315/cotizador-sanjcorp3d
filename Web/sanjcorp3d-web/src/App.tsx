@@ -1,4 +1,4 @@
-﻿import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 import {
   AlertTriangle, BarChart3, Bell, Calculator, CircleHelp, ClipboardList, FileClock, Gauge, Layers3, LockKeyhole,
   LogOut, Menu, MessageCircle, Moon, PackagePlus, PackageSearch, Printer, Settings, ShieldCheck, ShoppingCart, Sun, Users, X,
@@ -114,7 +114,7 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   const goTo = (next: string) => { window.location.hash = next; setRoute(next); setMobileOpen(false) }
   const navigation: Array<{ key: PageKey; label: string; icon: typeof Gauge; admin?: boolean }> = [
     { key: 'dashboard', label: 'Resumen', icon: Gauge }, { key: 'quote', label: 'Cotizador', icon: Calculator },
-    { key: 'storeQuote', label: 'Cotizador tienda', icon: ShoppingCart }, ...(canCatalog ? [{ key: 'storeProducts' as PageKey, label: 'Productos tienda', icon: PackagePlus }] : []),
+    { key: 'storeQuote', label: 'Cotizaciones tienda', icon: ShoppingCart }, ...(canCatalog ? [{ key: 'storeProducts' as PageKey, label: 'Productos tienda', icon: PackagePlus }] : []),
     ...(canOrders ? [{ key: 'orders' as PageKey, label: 'Pedidos', icon: ClipboardList }] : []),
     { key: 'printers', label: 'Impresoras', icon: Printer }, { key: 'consumables', label: 'Filamentos y resinas', icon: PackageSearch },
     { key: 'materials', label: 'Materiales', icon: Layers3 }, { key: 'history', label: 'Historial', icon: FileClock },
