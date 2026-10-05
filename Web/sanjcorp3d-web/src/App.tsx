@@ -26,6 +26,7 @@ const brandName = 'Atlas Impresiones 3D'
 const lightLogo = '/logo.png'
 const darkLogo = '/logoblanco.png'
 const themeKey = 'atlas.theme'
+const routeKey = 'atlas.route'
 type ThemeMode = 'light' | 'dark'
 
 export function App() {
@@ -44,7 +45,7 @@ export function App() {
   useEffect(() => { api.me().then(setProfile).catch(() => setProfile(null)).finally(() => setLoading(false)) }, [])
   if (loading) return <main className="center"><div className="spinner" aria-label="Cargando" /></main>
   if (!profile) return route === 'login' ? <Login onSuccess={setProfile} onBack={() => { window.location.hash = ''; setRoute('') }} theme={theme} logo={logo} onToggleTheme={toggleTheme} /> : <PublicHome onLoginClick={() => { window.location.hash = 'login'; setRoute('login') }} theme={theme} onToggleTheme={toggleTheme} />
-  return <Application profile={profile} theme={theme} logo={logo} onToggleTheme={toggleTheme} onProfileChange={setProfile} onLogout={() => api.logout().finally(() => { setProfile(null); window.location.hash = '' })} />
+  return <Application profile={profile} theme={theme} logo={logo} onToggleTheme={toggleTheme} onProfileChange={setProfile} onLogout={() => api.logout().finally(() => { localStorage.removeItem(routeKey); setProfile(null); window.location.hash = '' })} />
 }
 
 function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (profile: Profile) => void; onBack: () => void; theme: ThemeMode; logo: string; onToggleTheme: () => void }) {
@@ -64,7 +65,9 @@ function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (
       sessionStorage.removeItem('sanjcorp.tenant')
       const next = await api.login(username, password, code || undefined, workspace)
       onSuccess(next)
-      window.location.hash = next.isSuperAdmin ? 'supreme' : 'dashboard'
+      const target = next.isSuperAdmin ? 'supreme' : 'dashboard'
+      localStorage.setItem(routeKey, target)
+      window.location.hash = target
     } catch (reason) {
       const authError = reason as Error & { requiresTwoFactor?: boolean }
       if (authError.requiresTwoFactor) setRequiresCode(true)
@@ -100,9 +103,9 @@ function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (
 }
 
 function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onLogout }: { profile: Profile; theme: ThemeMode; logo: string; onToggleTheme: () => void; onProfileChange: (profile: Profile) => void; onLogout: () => void }) {
-  const [route, setRoute] = useState(() => window.location.hash.slice(1) || 'dashboard')
+  const [route, setRoute] = useState(() => window.location.hash.slice(1) || localStorage.getItem(routeKey) || 'dashboard')
   const [mobileOpen, setMobileOpen] = useState(false)
-  useEffect(() => { const listener = () => setRoute(window.location.hash.slice(1) || 'dashboard'); window.addEventListener('hashchange', listener); return () => window.removeEventListener('hashchange', listener) }, [])
+  useEffect(() => { const listener = () => { const next = window.location.hash.slice(1) || localStorage.getItem(routeKey) || 'dashboard'; setRoute(next); localStorage.setItem(routeKey, next) }; listener(); window.addEventListener('hashchange', listener); return () => window.removeEventListener('hashchange', listener) }, [])
   const page = route.split(':')[0] as PageKey
   const initialHistoryId = page === 'history' ? Number(route.split(':')[1] || 0) || undefined : undefined
   const isSuperAdmin = profile.isSuperAdmin === true || profile.roles.includes('SuperAdmin')
@@ -111,7 +114,7 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   const canCatalog = isSuperAdmin || profile.roles.includes('Administrator') || (profile.roles.includes('Maker') && profile.isMakerOwner === true)
   const canSale = isSuperAdmin || hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Maker'])
   const canOrders = isSuperAdmin || hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Production', 'Maker'])
-  const goTo = (next: string) => { window.location.hash = next; setRoute(next); setMobileOpen(false) }
+  const goTo = (next: string) => { localStorage.setItem(routeKey, next); window.location.hash = next; setRoute(next); setMobileOpen(false) }
   const navigation: Array<{ key: PageKey; label: string; icon: typeof Gauge; admin?: boolean }> = [
     { key: 'dashboard', label: 'Resumen', icon: Gauge }, { key: 'quote', label: 'Cotizador', icon: Calculator },
     { key: 'storeQuote', label: 'Cotizaciones tienda', icon: ShoppingCart }, ...(canCatalog ? [{ key: 'storeProducts' as PageKey, label: 'Productos tienda', icon: PackagePlus }] : []),

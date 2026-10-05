@@ -132,7 +132,10 @@ export function StoreProductsPage({ canManage }: { canManage: boolean }) {
     const current = JSON.parse(sessionStorage.getItem(cartKey) ?? '[]') as StoreCart[]
     sessionStorage.setItem(cartKey, JSON.stringify([cart, ...current].slice(0, 20)))
     window.dispatchEvent(new Event('store-cart-created'))
-    window.location.hash = 'storeQuote'
+    setCartLines([])
+    setQuoteInfo({ customer: '', phone: '', description: '', address: '' })
+    setQuoteOpen(false)
+    setSuccess('Cotizacion de tienda terminada. Puedes verla en Cotizaciones tienda.')
   }
 
   return <>
