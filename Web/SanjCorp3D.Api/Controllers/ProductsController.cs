@@ -74,12 +74,12 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var (calculation, products, printers) = await CalculateStore(request, ct);
         var next = (await db.Quotes.MaxAsync(x => (long?)x.Id, ct) ?? 0) + 1;
         var created = DateTime.UtcNow;
-        var productSummary = string.Join("; ", products.Select(x => $"{x.Product.Name} ({x.MaterialType}) x{x.Quantity}"));
+        var productSummary = string.Join("; ", products.Select(x => $"{x.Product.Name} ({x.MaterialLabel}) x{x.Quantity}"));
         var printerSummary = string.Join(", ", printers.Select(x => x.Name));
         var noteParts = new List<string>
         {
             "Cotizacion de productos de tienda.",
-            $"Materiales: {string.Join(", ", products.Select(x => x.MaterialType).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())}",
+            $"Materiales: {string.Join(", ", products.Select(x => x.MaterialLabel).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())}",
             $"Impresoras asignadas: {printerSummary}",
             $"PrinterIds: {string.Join(",", printers.Select(x => x.Id))}",
             $"Productos: {productSummary}"
@@ -113,6 +113,24 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
             TaxAmount = calculation.TaxAmount,
             RecommendedPrice = calculation.RecommendedPrice
         };
+        var quoteQuantity = Math.Max(1, quote.Quantity);
+        foreach (var line in products.Where(x => x.Consumable is not null))
+        {
+            var consumable = line.Consumable!;
+            var totalGrams = line.Product.FilamentGrams * line.Quantity;
+            quote.Consumables.Add(new QuoteConsumable
+            {
+                LegacyConsumableId = consumable.Id,
+                Name = consumable.Name,
+                Category = consumable.Category,
+                Material = consumable.Material,
+                Color = consumable.Color,
+                Grams = decimal.Round(totalGrams / quoteQuantity, 4, MidpointRounding.AwayFromZero),
+                PricePerUnit = consumable.PricePerUnit,
+                Density = consumable.Density,
+                LineCost = decimal.Round(totalGrams / 1000m * consumable.PricePerUnit, 4, MidpointRounding.AwayFromZero)
+            });
+        }
         db.Quotes.Add(quote);
         await db.SaveChangesAsync(ct);
         return CreatedAtAction("Get", "Quotes", new { id = quote.Id }, new { quote.Id, quote.OrderCode, quote.CreatedAtUtc, quote.Customer, quote.ProjectName, quote.ProductName, quote.PrinterName, quote.TotalWeight, CostTotal = quote.Subtotal, quote.RecommendedPrice, SoldAtUtc = (DateTime?)null });
@@ -120,7 +138,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
 
     private static decimal Percent(decimal amount, decimal percent) => amount * Math.Max(0, percent) / 100m;
 
-    private async Task<(StoreQuoteCalculationDto Calculation, List<(ProductCatalog Product, int Quantity, string MaterialType)> Products, List<Printer> Printers)> CalculateStore(StoreQuoteRequest request, CancellationToken ct)
+    private async Task<(StoreQuoteCalculationDto Calculation, List<(ProductCatalog Product, int Quantity, string MaterialType, string MaterialLabel, decimal PricePerKg, Consumable? Consumable)> Products, List<Printer> Printers)> CalculateStore(StoreQuoteRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Customer)) throw new ArgumentException("El cliente es obligatorio.");
         if (request.Lines.Count == 0) throw new ArgumentException("Agrega al menos un producto de tienda.");
@@ -138,12 +156,26 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         if (busyPrinterNames.Count > 0) throw new ArgumentException($"Estas impresoras ya tienen un pedido asignado: {string.Join(", ", busyPrinterNames)}. Deben terminar y enfriarse antes de recibir otro pedido.");
         var productIds = request.Lines.Select(x => x.ProductId).Distinct().ToArray();
         var catalog = await db.ProductCatalogs.Where(x => productIds.Contains(x.Id) && x.Active).ToDictionaryAsync(x => x.Id, ct);
-        var products = new List<(ProductCatalog Product, int Quantity, string MaterialType)>();
+        var consumableIds = request.Lines.Where(x => x.ConsumableId.HasValue).Select(x => x.ConsumableId!.Value).Distinct().ToArray();
+        var selectedConsumables = consumableIds.Length == 0 ? new Dictionary<long, Consumable>() : await db.Consumables.AsNoTracking().Where(x => consumableIds.Contains(x.Id) && x.Active).ToDictionaryAsync(x => x.Id, ct);
+        var products = new List<(ProductCatalog Product, int Quantity, string MaterialType, string MaterialLabel, decimal PricePerKg, Consumable? Consumable)>();
         foreach (var line in request.Lines)
         {
             if (!catalog.TryGetValue(line.ProductId, out var product)) throw new ArgumentException("Uno de los productos seleccionados no existe o est archivado.");
             if (product.ProductionMinutes <= 0) throw new ArgumentException($"Configura el tiempo de produccin de {product.Name} antes de cotizarlo.");
-            products.Add((product, line.Quantity, string.IsNullOrWhiteSpace(line.MaterialType) ? product.MaterialType : line.MaterialType.Trim()));
+            var materialType = string.IsNullOrWhiteSpace(line.MaterialType) ? product.MaterialType : line.MaterialType.Trim();
+            var materialLabel = materialType;
+            var pricePerKg = 0m;
+            Consumable? selectedConsumable = null;
+            if (line.ConsumableId.HasValue)
+            {
+                if (!selectedConsumables.TryGetValue(line.ConsumableId.Value, out var consumable)) throw new ArgumentException("El material/color seleccionado no existe o esta archivado.");
+                materialType = consumable.Material;
+                materialLabel = $"{consumable.Name} - {consumable.Material} - {consumable.Color}";
+                pricePerKg = consumable.PricePerUnit;
+                selectedConsumable = consumable;
+            }
+            products.Add((product, line.Quantity, materialType, materialLabel, pricePerKg, selectedConsumable));
         }
         var config = await settings.GetAsync(ct);
         var quantity = products.Sum(x => x.Quantity);
@@ -155,13 +187,13 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
             .GroupBy(x => x.Material)
             .Select(x => new { Material = x.Key, Price = x.Average(item => item.PricePerUnit) })
             .ToDictionaryAsync(x => x.Material, x => x.Price, StringComparer.OrdinalIgnoreCase, ct);
-        decimal MaterialUnitCost(ProductCatalog product, string materialType)
+        decimal MaterialUnitCost(ProductCatalog product, string materialType, decimal selectedPricePerKg)
         {
-            var pricePerKg = materialPrices.TryGetValue(materialType, out var price) ? price : 0m;
+            var pricePerKg = selectedPricePerKg > 0 ? selectedPricePerKg : materialPrices.TryGetValue(materialType, out var price) ? price : 0m;
             var calculated = product.FilamentGrams / 1000m * pricePerKg;
             return calculated > 0 ? calculated : product.MaterialCost;
         }
-        var material = products.Sum(x => MaterialUnitCost(x.Product, x.MaterialType) * x.Quantity);
+        var material = products.Sum(x => MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity);
         var electricity = averagePower / 1000m * printHours * config.ElectricityPerKwh;
         var directBase = material + electricity;
         var maintenance = config.MaintenancePerPrint * quantity + Percent(directBase, config.MaintenancePercent);
@@ -175,7 +207,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var multiplied = products.Sum(x =>
         {
             var lineHours = x.Product.ProductionMinutes * x.Quantity / 60m;
-            var lineMaterial = MaterialUnitCost(x.Product, x.MaterialType) * x.Quantity;
+            var lineMaterial = MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity;
             var lineElectricity = averagePower / 1000m * lineHours * config.ElectricityPerKwh;
             var lineBase = lineMaterial + lineElectricity;
             var lineCosts = lineBase + config.MaintenancePerPrint * x.Quantity + Percent(lineBase, config.MaintenancePercent) + Percent(lineBase, config.PreparationPercent) + Percent(lineBase, config.LaborPercent) + Percent(lineBase, config.WastePercent) + Percent(lineBase, config.OverheadPercent) + config.PackagingCost * x.Quantity;
