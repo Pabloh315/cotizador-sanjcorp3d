@@ -25,9 +25,18 @@ export function StoreQuotePage({ canWrite }: { canWrite: boolean }) {
   const [success, setSuccess] = useState('')
 
   const loadCarts = () => {
-    const parsed = JSON.parse(sessionStorage.getItem(cartKey) ?? '[]') as StoreCart[]
-    setCarts(parsed)
-    setSelectedCartId(current => current || parsed[0]?.id || '')
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(cartKey) ?? '[]') as StoreCart[]
+      const valid = Array.isArray(parsed) ? parsed.filter(cart => cart?.id && cart?.info && Array.isArray(cart.lines)) : []
+      if (valid.length !== parsed.length) sessionStorage.setItem(cartKey, JSON.stringify(valid))
+      setCarts(valid)
+      setSelectedCartId(current => valid.some(cart => cart.id === current) ? current : valid[0]?.id ?? '')
+    } catch {
+      sessionStorage.removeItem(cartKey)
+      setCarts([])
+      setSelectedCartId('')
+      setError('Se limpio un carrito local danado. Vuelve a crear la cotizacion de tienda.')
+    }
   }
 
   useEffect(() => {
@@ -61,11 +70,23 @@ export function StoreQuotePage({ canWrite }: { canWrite: boolean }) {
   function notes(cart: StoreCart) { return `Direccion: ${cart.info.address}\nDescripcion: ${cart.info.description}` }
   function request(): StoreQuoteRequest {
     if (!selectedCart) throw new Error('No hay carrito seleccionado.')
+    if (selectedCart.lines.some(line => !line.consumableId)) throw new Error('Este carrito no tiene material/color de inventario en todos sus productos. Vuelve a crearlo desde Productos tienda.')
     return { customer: selectedCart.info.customer, customerPhone: selectedCart.info.phone, projectName: selectedCart.info.description, printerIds, notes: notes(selectedCart), lines: selectedCart.lines }
   }
   async function calculate() { setBusy(true); setError(''); try { setCalculation(await api.calculateStoreQuote(request())) } catch (reason) { setError((reason as Error).message) } finally { setBusy(false) } }
-  async function save() { setBusy(true); setError(''); try { const result = await api.createStoreQuote(request()); setSaved(result); setCalculation(await api.calculateStoreQuote(request())); setSuccess(`Cotizacion ${result.orderCode} guardada correctamente.`) } catch (reason) { setError((reason as Error).message) } finally { setBusy(false) } }
-    async function confirmSale() {
+  async function save() {
+    if (saved) { setError('Esta cotizacion ya fue guardada. Confirma la venta o limpia para continuar.'); return }
+    setBusy(true); setError('')
+    try {
+      const payload = request()
+      const result = await api.createStoreQuote(payload)
+      setSaved(result)
+      setCalculation(await api.calculateStoreQuote(payload))
+      setSuccess(`Cotizacion ${result.orderCode} guardada correctamente.`)
+    } catch (reason) { setError((reason as Error).message) }
+    finally { setBusy(false) }
+  }
+  async function confirmSale() {
     if (!saved) return
     const cartId = selectedCart?.id
     if (!await confirmDialog({ title: 'Confirmar venta', message: 'Se registrara la venta y el pedido pasara a produccion.', highlight: saved.orderCode, confirmLabel: 'Si, confirmar', variant: 'success' })) return
@@ -97,7 +118,7 @@ export function StoreQuotePage({ canWrite }: { canWrite: boolean }) {
         {selectedCart && <section className="panel"><div className="section-title"><div><span className="step">02</span><h2>Detalle del carrito</h2></div></div><div className="breakdown"><div><dt>Cliente</dt><dd>{selectedCart.info.customer}</dd></div><div><dt>Telefono</dt><dd>{selectedCart.info.phone}</dd></div><div><dt>Descripcion</dt><dd>{selectedCart.info.description}</dd></div><div><dt>Direccion</dt><dd>{selectedCart.info.address}</dd></div></div><div className="line-list">{selectedCart.lines.map((line, index) => { const product = productById.get(line.productId); return <div className="line-item" key={`${line.productId}-${line.consumableId ?? line.materialType}-${index}`}><div><strong>{product?.name}</strong><small>{line.materialLabel || line.materialType} - {line.quantity} unid.</small></div><b>{number((product?.filamentGrams ?? 0) * line.quantity)} g</b></div> })}</div></section>}
         <section className="panel"><div className="section-title"><div><span className="step">03</span><h2>Impresoras libres</h2></div><span className="muted">Maximo 3</span></div><div className="printer-choice-grid">{printers.map(printer => { const selected = printerIds.includes(printer.id); return <button type="button" key={printer.id} aria-pressed={selected} className={`printer-choice ${selected ? 'selected' : ''}`} onClick={() => togglePrinter(printer.id)}><span><strong>{printer.name}</strong><small>{selected ? 'Seleccionada para este pedido' : 'Libre para asignar'}</small></span><b>{selected ? 'OK' : '+'}</b></button> })}</div>{printerIds.length > 0 && <p className="selection-note">Seleccionadas: {printers.filter(printer => printerIds.includes(printer.id)).map(printer => printer.name).join(', ')}</p>}</section>
       </div>
-      <aside className="quote-summary panel"><p className="eyebrow">RESULTADO</p><h2>Resumen de tienda</h2><div className="breakdown"><div><dt>Cantidad total</dt><dd>{totals.quantity}</dd></div><div><dt>Tiempo automatico</dt><dd>{number(totals.minutes)} min</dd></div><div><dt>Filamento requerido</dt><dd>{number(totals.grams)} g</dd></div><div><dt>Costo base registrado</dt><dd>{money(totals.material, settings?.currencySymbol)}</dd></div></div>{!calculation ? <div className="summary-placeholder"><Calculator size={34} /><p>Calcula para ver el precio final.</p></div> : <><div className="price-hero"><small>Total sugerido</small><strong>{money(calculation.recommendedPrice, settings?.currencySymbol)}</strong><span>{number(calculation.printHours)} horas de produccion</span></div><dl className="breakdown"><div><dt>Material</dt><dd>{money(calculation.materialCost, settings?.currencySymbol)}</dd></div><div><dt>Electricidad</dt><dd>{money(calculation.electricityCost, settings?.currencySymbol)}</dd></div><div><dt>Mantenimiento</dt><dd>{money(calculation.maintenanceCost, settings?.currencySymbol)}</dd></div><div><dt>Preparacion</dt><dd>{money(calculation.preparationCost, settings?.currencySymbol)}</dd></div><div><dt>Salarios</dt><dd>{money(calculation.laborCost, settings?.currencySymbol)}</dd></div><div><dt>Merma/fallos</dt><dd>{money(calculation.wasteCost, settings?.currencySymbol)}</dd></div><div><dt>Administracion</dt><dd>{money(calculation.overheadCost, settings?.currencySymbol)}</dd></div><div><dt>Empaque</dt><dd>{money(calculation.packagingCost, settings?.currencySymbol)}</dd></div><div><dt>Transporte</dt><dd>{money(calculation.transportCost, settings?.currencySymbol)}</dd></div><div className="subtotal"><dt>Costo total</dt><dd>{money(calculation.subtotal, settings?.currencySymbol)}</dd></div><div><dt>Ganancia</dt><dd>{money(calculation.profitAmount, settings?.currencySymbol)}</dd></div><div><dt>Impuesto</dt><dd>{money(calculation.taxAmount, settings?.currencySymbol)}</dd></div></dl></>}{saved && <div className="saved-ticket"><CheckCircle2 size={19} /><div><small>Codigo guardado</small><strong>{saved.orderCode}</strong></div><span className={`status ${sold ? 'ok' : 'warning'}`}>{sold ? 'VENDIDA' : 'PENDIENTE'}</span><button className="icon ghost" onClick={() => api.downloadVoucher(saved.id)}><Download size={16} /></button></div>}{sold && <button type="button" className="secondary view-orders-button" onClick={() => { localStorage.setItem('atlas.route', 'orders'); window.location.hash = 'orders' }}><ClipboardList size={17} />Ver en pedidos</button>}<div className="summary-actions"><button className="secondary" disabled={busy || !selectedCart || printerIds.length === 0} onClick={calculate}><Calculator size={17} />Calcular precio</button><button disabled={busy || !selectedCart || printerIds.length === 0} onClick={save}><Save size={17} />Guardar cotizacion</button>{saved && !sold && <button className="sale-button" disabled={busy} onClick={confirmSale}><ShoppingBag size={17} />Confirmar venta</button>}<button className="ghost" disabled={busy} onClick={clear}><RotateCcw size={16} />Limpiar</button></div></aside>
+      <aside className="quote-summary panel"><p className="eyebrow">RESULTADO</p><h2>Resumen de tienda</h2><div className="breakdown"><div><dt>Cantidad total</dt><dd>{totals.quantity}</dd></div><div><dt>Tiempo automatico</dt><dd>{number(totals.minutes)} min</dd></div><div><dt>Filamento requerido</dt><dd>{number(totals.grams)} g</dd></div><div><dt>Costo base registrado</dt><dd>{money(totals.material, settings?.currencySymbol)}</dd></div></div>{!calculation ? <div className="summary-placeholder"><Calculator size={34} /><p>Calcula para ver el precio final.</p></div> : <><div className="price-hero"><small>Total sugerido</small><strong>{money(calculation.recommendedPrice, settings?.currencySymbol)}</strong><span>{number(calculation.printHours)} horas de produccion</span></div><dl className="breakdown"><div><dt>Material</dt><dd>{money(calculation.materialCost, settings?.currencySymbol)}</dd></div><div><dt>Electricidad</dt><dd>{money(calculation.electricityCost, settings?.currencySymbol)}</dd></div><div><dt>Mantenimiento</dt><dd>{money(calculation.maintenanceCost, settings?.currencySymbol)}</dd></div><div><dt>Preparacion</dt><dd>{money(calculation.preparationCost, settings?.currencySymbol)}</dd></div><div><dt>Salarios</dt><dd>{money(calculation.laborCost, settings?.currencySymbol)}</dd></div><div><dt>Merma/fallos</dt><dd>{money(calculation.wasteCost, settings?.currencySymbol)}</dd></div><div><dt>Administracion</dt><dd>{money(calculation.overheadCost, settings?.currencySymbol)}</dd></div><div><dt>Empaque</dt><dd>{money(calculation.packagingCost, settings?.currencySymbol)}</dd></div><div><dt>Transporte</dt><dd>{money(calculation.transportCost, settings?.currencySymbol)}</dd></div><div className="subtotal"><dt>Costo total</dt><dd>{money(calculation.subtotal, settings?.currencySymbol)}</dd></div><div><dt>Ganancia</dt><dd>{money(calculation.profitAmount, settings?.currencySymbol)}</dd></div><div><dt>Impuesto</dt><dd>{money(calculation.taxAmount, settings?.currencySymbol)}</dd></div></dl></>}{saved && <div className="saved-ticket"><CheckCircle2 size={19} /><div><small>Codigo guardado</small><strong>{saved.orderCode}</strong></div><span className={`status ${sold ? 'ok' : 'warning'}`}>{sold ? 'VENDIDA' : 'PENDIENTE'}</span><button className="icon ghost" onClick={() => api.downloadVoucher(saved.id)}><Download size={16} /></button></div>}{sold && <button type="button" className="secondary view-orders-button" onClick={() => { localStorage.setItem('atlas.route', 'orders'); window.location.hash = 'orders' }}><ClipboardList size={17} />Ver en pedidos</button>}<div className="summary-actions"><button className="secondary" disabled={busy || !selectedCart || printerIds.length === 0} onClick={calculate}><Calculator size={17} />Calcular precio</button><button disabled={busy || Boolean(saved) || !selectedCart || printerIds.length === 0} onClick={save}><Save size={17} />Guardar cotizacion</button>{saved && !sold && <button className="sale-button" disabled={busy} onClick={confirmSale}><ShoppingBag size={17} />Confirmar venta</button>}<button className="ghost" disabled={busy} onClick={clear}><RotateCcw size={16} />Limpiar</button></div></aside>
     </div>
   </>
 }

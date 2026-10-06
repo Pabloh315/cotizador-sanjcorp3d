@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -71,71 +72,76 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
     public async Task<IActionResult> CreateStoreQuote(StoreQuoteRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotizacion." });
-        var (calculation, products, printers) = await CalculateStore(request, ct);
-        var next = (await db.Quotes.MaxAsync(x => (long?)x.Id, ct) ?? 0) + 1;
-        var created = DateTime.UtcNow;
-        var productSummary = string.Join("; ", products.Select(x => $"{x.Product.Name} ({x.MaterialLabel}) x{x.Quantity}"));
-        var printerSummary = string.Join(", ", printers.Select(x => x.Name));
-        var noteParts = new List<string>
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync<IActionResult>(async () =>
         {
-            "Cotizacion de productos de tienda.",
-            $"Materiales: {string.Join(", ", products.Select(x => x.MaterialLabel).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())}",
-            $"Impresoras asignadas: {printerSummary}",
-            $"PrinterIds: {string.Join(",", printers.Select(x => x.Id))}",
-            $"Productos: {productSummary}"
-        };
-        if (!string.IsNullOrWhiteSpace(request.Notes)) noteParts.Add(request.Notes.Trim());
-        var quote = new Quote
-        {
-            OrderCode = $"PT{created:yyyyMMdd}{next:0000}",
-            CreatedAtUtc = created,
-            Customer = request.Customer.Trim(),
-            CustomerPhone = request.CustomerPhone.Trim(),
-            ProjectName = string.IsNullOrWhiteSpace(request.ProjectName) ? "Productos de tienda" : request.ProjectName.Trim(),
-            ProductName = productSummary,
-            PrinterId = printers[0].Id,
-            PrinterName = printerSummary,
-            PrintHours = calculation.PrintHours,
-            Quantity = (int)calculation.TotalQuantity,
-            AdditionalManualCost = 0,
-            ProfitMultiplier = products.Count == 0 ? 1 : decimal.Round(products.Sum(x => x.Product.ProfitMultiplier * x.Quantity) / Math.Max(1, products.Sum(x => x.Quantity)), 4, MidpointRounding.AwayFromZero),
-            Notes = string.Join("\n", noteParts),
-            TotalWeight = 0,
-            MaterialCost = calculation.MaterialCost,
-            ElectricityCost = calculation.ElectricityCost,
-            MachineCost = 0,
-            MaintenanceCost = calculation.MaintenanceCost,
-            LaborCost = 0,
-            AdditionalCost = 0,
-            FunctionalSurcharge = 0,
-            Subtotal = calculation.Subtotal,
-            ProfitAmount = calculation.ProfitAmount,
-            TaxAmount = calculation.TaxAmount,
-            RecommendedPrice = calculation.RecommendedPrice
-        };
-        var quoteQuantity = Math.Max(1, quote.Quantity);
-        foreach (var line in products.Where(x => x.Consumable is not null))
-        {
-            var consumable = line.Consumable!;
-            var totalGrams = line.Product.FilamentGrams * line.Quantity;
-            quote.Consumables.Add(new QuoteConsumable
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            var (calculation, products, printers) = await CalculateStore(request, ct);
+            var next = (await db.Quotes.MaxAsync(x => (long?)x.Id, ct) ?? 0) + 1;
+            var created = DateTime.UtcNow;
+            var productSummary = string.Join("; ", products.Select(x => $"{x.Product.Name} ({x.MaterialLabel}) x{x.Quantity}"));
+            var printerSummary = string.Join(", ", printers.Select(x => x.Name));
+            var noteParts = new List<string>
             {
-                LegacyConsumableId = consumable.Id,
-                Name = consumable.Name,
-                Category = consumable.Category,
-                Material = consumable.Material,
-                Color = consumable.Color,
-                Grams = decimal.Round(totalGrams / quoteQuantity, 4, MidpointRounding.AwayFromZero),
-                PricePerUnit = consumable.PricePerUnit,
-                Density = consumable.Density,
-                LineCost = decimal.Round(totalGrams / 1000m * consumable.PricePerUnit, 4, MidpointRounding.AwayFromZero)
-            });
-        }
-        db.Quotes.Add(quote);
-        await db.SaveChangesAsync(ct);
-        return CreatedAtAction("Get", "Quotes", new { id = quote.Id }, new { quote.Id, quote.OrderCode, quote.CreatedAtUtc, quote.Customer, quote.ProjectName, quote.ProductName, quote.PrinterName, quote.TotalWeight, CostTotal = quote.Subtotal, quote.RecommendedPrice, SoldAtUtc = (DateTime?)null });
+                "Cotizacion de productos de tienda.",
+                $"Materiales: {string.Join(", ", products.Select(x => x.MaterialLabel).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct())}",
+                $"Impresoras asignadas: {printerSummary}",
+                $"PrinterIds: {string.Join(",", printers.Select(x => x.Id))}",
+                $"Productos: {productSummary}"
+            };
+            if (!string.IsNullOrWhiteSpace(request.Notes)) noteParts.Add(request.Notes.Trim());
+            var quote = new Quote
+            {
+                OrderCode = $"PT{created:yyyyMMdd}{next:0000}",
+                CreatedAtUtc = created,
+                Customer = request.Customer.Trim(),
+                CustomerPhone = request.CustomerPhone.Trim(),
+                ProjectName = string.IsNullOrWhiteSpace(request.ProjectName) ? "Productos de tienda" : request.ProjectName.Trim(),
+                ProductName = productSummary,
+                PrinterId = printers[0].Id,
+                PrinterName = printerSummary,
+                PrintHours = calculation.PrintHours,
+                Quantity = (int)calculation.TotalQuantity,
+                AdditionalManualCost = 0,
+                ProfitMultiplier = products.Count == 0 ? 1 : decimal.Round(products.Sum(x => x.Product.ProfitMultiplier * x.Quantity) / Math.Max(1, products.Sum(x => x.Quantity)), 4, MidpointRounding.AwayFromZero),
+                Notes = string.Join("\n", noteParts),
+                TotalWeight = 0,
+                MaterialCost = calculation.MaterialCost,
+                ElectricityCost = calculation.ElectricityCost,
+                MachineCost = 0,
+                MaintenanceCost = calculation.MaintenanceCost,
+                LaborCost = 0,
+                AdditionalCost = 0,
+                FunctionalSurcharge = 0,
+                Subtotal = calculation.Subtotal,
+                ProfitAmount = calculation.ProfitAmount,
+                TaxAmount = calculation.TaxAmount,
+                RecommendedPrice = calculation.RecommendedPrice
+            };
+            var quoteQuantity = Math.Max(1, quote.Quantity);
+            foreach (var line in products)
+            {
+                var consumable = line.Consumable!;
+                var totalGrams = line.Product.FilamentGrams * line.Quantity;
+                quote.Consumables.Add(new QuoteConsumable
+                {
+                    LegacyConsumableId = consumable.Id,
+                    Name = consumable.Name,
+                    Category = consumable.Category,
+                    Material = consumable.Material,
+                    Color = consumable.Color,
+                    Grams = decimal.Round(totalGrams / quoteQuantity, 4, MidpointRounding.AwayFromZero),
+                    PricePerUnit = consumable.PricePerUnit,
+                    Density = consumable.Density,
+                    LineCost = decimal.Round(totalGrams / 1000m * consumable.PricePerUnit, 4, MidpointRounding.AwayFromZero)
+                });
+            }
+            db.Quotes.Add(quote);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            return CreatedAtAction("Get", "Quotes", new { id = quote.Id }, new { quote.Id, quote.OrderCode, quote.CreatedAtUtc, quote.Customer, quote.ProjectName, quote.ProductName, quote.PrinterName, quote.TotalWeight, CostTotal = quote.Subtotal, quote.RecommendedPrice, SoldAtUtc = (DateTime?)null });
+        });
     }
-
     private static decimal Percent(decimal amount, decimal percent) => amount * Math.Max(0, percent) / 100m;
 
     private async Task<(StoreQuoteCalculationDto Calculation, List<(ProductCatalog Product, int Quantity, string MaterialType, string MaterialLabel, decimal PricePerKg, Consumable? Consumable)> Products, List<Printer> Printers)> CalculateStore(StoreQuoteRequest request, CancellationToken ct)
@@ -143,6 +149,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         if (string.IsNullOrWhiteSpace(request.Customer)) throw new ArgumentException("El cliente es obligatorio.");
         if (request.Lines.Count == 0) throw new ArgumentException("Agrega al menos un producto de tienda.");
         if (request.Lines.Any(x => x.Quantity <= 0)) throw new ArgumentException("Las cantidades deben ser mayores que cero.");
+        if (request.Lines.Any(x => !x.ConsumableId.HasValue)) throw new ArgumentException("Selecciona el material/color del inventario para cada producto.");
         var printerIds = request.PrinterIds.Distinct().Take(3).ToArray();
         if (printerIds.Length is < 1 or > 3) throw new ArgumentException("Selecciona entre una y tres impresoras.");
         var printers = await db.Printers.Where(x => printerIds.Contains(x.Id) && x.Active).ToListAsync(ct);
