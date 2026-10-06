@@ -62,6 +62,9 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const materialById = useMemo(() => new Map(materials.map(x => [x.id, x])), [materials])
   const selectedPrinter = useMemo(() => printers.find(x => x.id === form.printerId), [printers, form.printerId])
   const profitPercentTotal = useMemo(() => profitCosts.reduce((sum, line) => sum + clampPercent(line.percent), 0), [profitCosts])
+  const pendingProfitPercent = clampPercent(newProfitCostPercent)
+  const liveProfitPercentTotal = profitPercentTotal + pendingProfitPercent
+  const percentFill = Math.min(100, liveProfitPercentTotal)
   const estimatedBaseCost = useMemo(() => {
     if (!settings || !selectedPrinter) return 0
     const pieces = Math.max(1, Number(form.quantity || 1))
@@ -222,9 +225,16 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
           <div className="section-title"><div><span className="step">04</span><h2>Ganancias</h2></div></div>
           <div className="form-grid two">
             <label>Multiplicador de ganancia<input type="number" min="1" step="0.01" value={form.profitMultiplier} onChange={e => update('profitMultiplier', Number(e.target.value))} /></label>
-            <label>Total de costos porcentuales<input type="number" value={profitPercentTotal.toFixed(2)} disabled /></label>
+            <label>Total de costos porcentuales<input type="number" value={liveProfitPercentTotal.toFixed(2)} disabled /></label>
           </div>
-          <div className="form-grid three compact-fields"><label>Mantenimiento (%)<input type="number" min="0" step="0.01" value={form.maintenancePercent} onChange={e => update('maintenancePercent', Number(e.target.value))} /></label><label>Preparacin (%)<input type="number" min="0" step="0.01" value={form.preparationPercent} onChange={e => update('preparationPercent', Number(e.target.value))} /></label><label>Salarios (%)<input type="number" min="0" step="0.01" value={form.laborPercent} onChange={e => update('laborPercent', Number(e.target.value))} /></label><label>Merma/fallos (%)<input type="number" min="0" step="0.01" value={form.wastePercent} onChange={e => update('wastePercent', Number(e.target.value))} /></label><label>Administracin/energa extra (%)<input type="number" min="0" step="0.01" value={form.overheadPercent} onChange={e => update('overheadPercent', Number(e.target.value))} /></label><label>Empaque por pieza<input type="number" min="0" step="0.01" value={form.packagingCost} onChange={e => update('packagingCost', Number(e.target.value))} /></label><label>Transporte<input type="number" min="0" step="0.01" value={form.transportCost} onChange={e => update('transportCost', Number(e.target.value))} /></label></div><div className="profit-costs">
+          <div className="form-grid three compact-fields"><label>Mantenimiento (%)<input type="number" min="0" step="0.01" value={form.maintenancePercent} onChange={e => update('maintenancePercent', Number(e.target.value))} /></label><label>Preparacin (%)<input type="number" min="0" step="0.01" value={form.preparationPercent} onChange={e => update('preparationPercent', Number(e.target.value))} /></label><label>Salarios (%)<input type="number" min="0" step="0.01" value={form.laborPercent} onChange={e => update('laborPercent', Number(e.target.value))} /></label><label>Merma/fallos (%)<input type="number" min="0" step="0.01" value={form.wastePercent} onChange={e => update('wastePercent', Number(e.target.value))} /></label><label>Administracin/energa extra (%)<input type="number" min="0" step="0.01" value={form.overheadPercent} onChange={e => update('overheadPercent', Number(e.target.value))} /></label><label>Empaque por pieza<input type="number" min="0" step="0.01" value={form.packagingCost} onChange={e => update('packagingCost', Number(e.target.value))} /></label><label>Transporte<input type="number" min="0" step="0.01" value={form.transportCost} onChange={e => update('transportCost', Number(e.target.value))} /></label></div>
+          <div className="profit-percent-live">
+            <div><span>Registrado</span><strong>{profitPercentTotal.toFixed(2)}%</strong></div>
+            <div><span>Por agregar</span><strong>{pendingProfitPercent.toFixed(2)}%</strong></div>
+            <div><span>Total en vivo</span><strong>{liveProfitPercentTotal.toFixed(2)}%</strong></div>
+            <div className="profit-percent-meter" aria-hidden="true"><span style={{ width: `${percentFill}%` }} /></div>
+          </div>
+          <div className="profit-costs">
             {profitCosts.map(line => <div className="profit-cost-row" key={line.id}><label>{line.name}<input type="number" min="0" max="100" step="0.01" value={line.percent} onChange={e => updateProfitCost(line.id, Number(e.target.value))} /></label><span>%</span>{!line.fixed && <button className="icon ghost danger-text" type="button" aria-label="Quitar" onClick={() => removeProfitCost(line.id)}><Trash2 size={16} /></button>}</div>)}
           </div>
           <div className="inline-form profit-cost-add">

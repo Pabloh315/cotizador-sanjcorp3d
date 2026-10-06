@@ -1955,3 +1955,59 @@ body.atlas-theme-light .empty-state svg {
 body.atlas-theme-light th {
   background: #f2faf8;
 }
+
+.profit-percent-live {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .65rem;
+  margin-top: 1rem;
+  padding: .85rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #081814;
+}
+.profit-percent-live > div:not(.profit-percent-meter) {
+  min-width: 0;
+  display: grid;
+  gap: .18rem;
+}
+.profit-percent-live span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 750;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.profit-percent-live strong {
+  color: var(--text);
+  font-size: 1.05rem;
+}
+.profit-percent-meter {
+  grid-column: 1 / -1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #12302a;
+}
+.profit-percent-meter span {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1fd6c2, #acd65a);
+  transition: width .22s ease;
+}
+body.atlas-theme-light .profit-percent-live {
+  background: #f6fbfa;
+  border-color: #cde5e0;
+}
+body.atlas-theme-light .profit-percent-live strong {
+  color: #0b211d;
+}
+body.atlas-theme-light .profit-percent-meter {
+  background: #d7ece7;
+}
+@media (max-width: 650px) {
+  .profit-percent-live { grid-template-columns: 1fr; }
+  .profit-percent-meter { grid-column: auto; }
+}
