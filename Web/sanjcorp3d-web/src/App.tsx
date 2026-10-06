@@ -115,17 +115,32 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   const canSale = isSuperAdmin || hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Maker'])
   const canOrders = isSuperAdmin || hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Production', 'Maker'])
   const goTo = (next: string) => { localStorage.setItem(routeKey, next); window.location.hash = next; setRoute(next); setMobileOpen(false) }
-  const navigation: Array<{ key: PageKey; label: string; icon: typeof Gauge; admin?: boolean }> = [
-    { key: 'dashboard', label: 'Resumen', icon: Gauge }, { key: 'quote', label: 'Cotizador', icon: Calculator },
-    { key: 'storeQuote', label: 'Cotizaciones tienda', icon: ShoppingCart }, ...(canCatalog ? [{ key: 'storeProducts' as PageKey, label: 'Productos tienda', icon: PackagePlus }] : []),
-    ...(canOrders ? [{ key: 'orders' as PageKey, label: 'Pedidos', icon: ClipboardList }] : []),
-    { key: 'printers', label: 'Impresoras', icon: Printer }, { key: 'consumables', label: 'Filamentos y resinas', icon: PackageSearch },
-    { key: 'materials', label: 'Materiales', icon: Layers3 }, { key: 'history', label: 'Historial', icon: FileClock },
-    { key: 'reports', label: 'Reportes y ventas', icon: BarChart3 }, { key: 'chat', label: 'Chat', icon: MessageCircle }, ...(isAdmin ? [{ key: 'users' as PageKey, label: 'Usuarios', icon: Users, admin: true }] : []),
-    { key: 'settings', label: 'Configuración', icon: Settings }, { key: 'help', label: 'Ayuda', icon: CircleHelp },
-    ...(isSuperAdmin ? [{ key: 'supreme' as PageKey, label: 'Administrar espacios', icon: ShieldCheck, admin: true }] : []),
-  ]
-  const visibleNavigation = isSuperAdmin ? [{ key: 'supreme' as PageKey, label: 'Administracion', icon: ShieldCheck }] : navigation
+  type NavItem = { key: PageKey; label: string; icon: typeof Gauge; admin?: boolean }
+  const navItem = (key: PageKey, label: string, icon: typeof Gauge, admin = false): NavItem => ({ key, label, icon, admin })
+  const navigationGroups: Array<{ label: string; items: NavItem[] }> = [
+    { label: 'Inicio', items: [navItem('dashboard', 'Resumen', Gauge)] },
+    { label: 'Trabajo diario', items: [
+      navItem('quote', 'Cotizador', Calculator),
+      navItem('storeQuote', 'Cotizaciones tienda', ShoppingCart),
+      ...(canOrders ? [navItem('orders', 'Pedidos', ClipboardList)] : []),
+      navItem('chat', 'Chat', MessageCircle),
+    ] },
+    { label: 'Catalogos', items: [
+      ...(canCatalog ? [navItem('storeProducts', 'Productos tienda', PackagePlus)] : []),
+      navItem('printers', 'Impresoras', Printer),
+      navItem('consumables', 'Filamentos y resinas', PackageSearch),
+      navItem('materials', 'Materiales', Layers3),
+    ] },
+    { label: 'Ventas y sistema', items: [
+      navItem('history', 'Historial', FileClock),
+      navItem('reports', 'Reportes y ventas', BarChart3),
+      ...(isAdmin ? [navItem('users', 'Usuarios', Users, true)] : []),
+      navItem('settings', 'Configuracion', Settings),
+      navItem('help', 'Ayuda', CircleHelp),
+      ...(isSuperAdmin ? [navItem('supreme', 'Administrar espacios', ShieldCheck, true)] : []),
+    ] },
+  ].filter(group => group.items.length > 0)
+  const visibleNavigationGroups: Array<{ label: string; items: NavItem[] }> = isSuperAdmin ? [{ label: 'Sistema', items: [navItem('supreme', 'Administracion', ShieldCheck)] }] : navigationGroups
   const activeWorkspace = profile.workspaces?.find(x => x.id === (profile.tenantId ?? sessionStorage.getItem('sanjcorp.tenant')))
   const receiptLogo = isSuperAdmin ? (profile.workspaces?.find(x => x.kind === 'technology')?.logoUrl ?? profile.logoUrl ?? logo) : (activeWorkspace?.logoUrl ?? profile.logoUrl ?? logo)
   let content
@@ -148,7 +163,7 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   }
   return <div className="app-shell">
     {mobileOpen && <button className="sidebar-scrim" aria-label="Cerrar menu" onClick={() => setMobileOpen(false)} />}
-    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-logo small-mark"><img src={logo} alt={brandName} /></div><div><strong>{isSuperAdmin ? 'ADMINISTRACION' : 'ATLAS'}</strong><span>{isSuperAdmin ? 'PANEL SUPREMO' : 'IMPRESIONES 3D'}</span></div><button className="icon mobile-close" onClick={() => setMobileOpen(false)}><X size={20} /></button></div><nav>{visibleNavigation.map(({ key, label, icon: Icon }) => <button key={key} className={page === key ? 'active' : ''} onClick={() => goTo(key)}><Icon size={18} /><span>{label}</span></button>)}</nav><div className="sidebar-footer"><div className="signed-user"><div className="avatar"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div><div><strong>{profile.displayName}</strong><span>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Cerrar sesión</button></div></aside>
+    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-logo small-mark"><img src={logo} alt={brandName} /></div><div><strong>{isSuperAdmin ? 'ADMINISTRACION' : 'ATLAS'}</strong><span>{isSuperAdmin ? 'PANEL SUPREMO' : 'IMPRESIONES 3D'}</span></div><button className="icon mobile-close" onClick={() => setMobileOpen(false)}><X size={20} /></button></div><nav>{visibleNavigationGroups.map(group => <section className="nav-section" key={group.label}><p>{group.label}</p>{group.items.map(({ key, label, icon: Icon }) => <button key={key} className={page === key ? 'active' : ''} onClick={() => goTo(key)}><Icon size={18} /><span>{label}</span></button>)}</section>)}</nav><div className="sidebar-footer"><div className="signed-user"><div className="avatar"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div><div><strong>{profile.displayName}</strong><span>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Cerrar sesión</button></div></aside>
     <div className="workspace"><header className="topbar"><button className="icon menu-button" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div><span className="connection-dot" />{isSuperAdmin ? 'Panel de administración' : brandName}</div>{isSuperAdmin && <select className="workspace-switcher" value={supremeMode} onChange={e => { const mode = e.target.value as 'technology' | 'makers'; setSupremeMode(mode); sessionStorage.setItem('sanjcorp.mode', mode); goTo('supreme') }}><option value="technology">{brandName}</option><option value="makers">Makers</option></select>}<button type="button" className="theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>{!isSuperAdmin && <InventoryAlerts onOpen={() => goTo('consumables')} />}<details className="profile-menu"><summary className="profile-chip"><span>{profile.displayName}</span><div className="avatar mini"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div></summary><div className="profile-popover"><small>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</small>{!isSuperAdmin && <button onClick={() => goTo('settings')}>Configuración</button>}<button onClick={onLogout}>Cerrar sesión</button></div></details></header><main className="page-content">{content}</main><footer className="site-copyright">Atlas Impresiones 3D - Todos los derechos reservados.</footer></div>
   </div>
 }

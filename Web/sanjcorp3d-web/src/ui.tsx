@@ -1,6 +1,6 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components */
 import type { ReactNode } from 'react'
-import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Inbox, LoaderCircle } from 'lucide-react'
 
 export function todayInput(date = new Date()) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
@@ -60,8 +60,8 @@ export function SuccessMessage({ message }: { message?: string }) {
   return message ? <div className="alert success" role="status"><CheckCircle2 size={18} /><span>{message}</span></div> : null
 }
 
-export function Empty({ children = 'No hay datos para mostrar.' }: { children?: ReactNode }) {
-  return <div className="empty-state">{children}</div>
+export function Empty({ children = 'Todavia no hay informacion para mostrar.' }: { children?: ReactNode }) {
+  return <div className="empty-state"><Inbox size={28} /><span>{children}</span></div>
 }
 
 export function Status({ active, trueLabel = 'ACTIVO', falseLabel = 'ARCHIVADO' }: { active: boolean; trueLabel?: string; falseLabel?: string }) {
