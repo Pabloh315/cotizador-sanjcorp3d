@@ -1958,7 +1958,7 @@ body.atlas-theme-light th {
 
 .profit-percent-live {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: .65rem;
   margin-top: 1rem;
   padding: .85rem;
