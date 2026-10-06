@@ -20,7 +20,7 @@ public static class QuoteCalculator
     {
         if (string.IsNullOrWhiteSpace(request.Customer) || string.IsNullOrWhiteSpace(request.ProjectName)) throw new ArgumentException("Cliente y proyecto son obligatorios.");
         if (request.PrintHours <= 0 || request.Quantity <= 0) throw new ArgumentException("Tiempo y cantidad deben ser mayores que cero.");
-        if (request.ProfitMultiplier < 1) throw new ArgumentException("El multiplicador debe ser igual o mayor que 1.");
+        if (request.ProfitMultiplier < 1.25m) throw new ArgumentException("El margen de ganancia debe ser igual o mayor al 25%.");
         if (request.AdditionalManualCost < 0) throw new ArgumentException("El costo adicional no puede ser negativo.");
         if (consumables.Count == 0 || consumables.Sum(x => x.Grams) <= 0) throw new ArgumentException("Agrega al menos un consumible con peso mayor que cero.");
         if (consumables.Any(x => x.Grams <= 0)) throw new ArgumentException("Los pesos deben ser mayores que cero.");

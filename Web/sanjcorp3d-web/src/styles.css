@@ -2011,3 +2011,42 @@ body.atlas-theme-light .profit-percent-meter {
   .profit-percent-live { grid-template-columns: 1fr; }
   .profit-percent-meter { grid-column: auto; }
 }
+
+.margin-shortcuts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-top: .75rem;
+}
+.margin-shortcuts span {
+  color: var(--muted);
+  font-size: .7rem;
+  font-weight: 750;
+}
+.margin-shortcuts button {
+  min-height: 32px;
+  padding: .38rem .7rem;
+  border-radius: 999px;
+  color: #d8eee9;
+  background: transparent;
+  border-color: #285b53;
+  font-size: .75rem;
+}
+.margin-shortcuts button.active,
+.margin-shortcuts button:hover:not(:disabled) {
+  color: #031714;
+  background: #1fd6c2;
+  border-color: #1fd6c2;
+}
+body.atlas-theme-light .margin-shortcuts button {
+  color: #123b35;
+  background: #ffffff;
+  border-color: #c5dfda;
+}
+body.atlas-theme-light .margin-shortcuts button.active,
+body.atlas-theme-light .margin-shortcuts button:hover:not(:disabled) {
+  color: #031714;
+  background: #1fd6c2;
+  border-color: #1fd6c2;
+}

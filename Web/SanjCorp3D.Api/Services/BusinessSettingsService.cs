@@ -35,7 +35,7 @@ public sealed class BusinessSettingsService(AppDbContext db)
         if (string.IsNullOrWhiteSpace(settings.BusinessName) || string.IsNullOrWhiteSpace(settings.CurrencySymbol)) throw new ArgumentException("El negocio y el simbolo monetario son obligatorios.");
         if (settings.ElectricityPerKwh < 0 || settings.MaintenancePerPrint < 0 || settings.TaxPercent < 0 || settings.RoundTo < 0 || settings.PackagingCost < 0 || settings.TransportCost < 0) throw new ArgumentException("Los costos no pueden ser negativos.");
         if (settings.MaintenancePercent < 0 || settings.PreparationPercent < 0 || settings.LaborPercent < 0 || settings.WastePercent < 0 || settings.OverheadPercent < 0) throw new ArgumentException("Los porcentajes no pueden ser negativos.");
-        if (settings.DefaultProfitMultiplier < 1) throw new ArgumentException("El multiplicador debe ser igual o mayor que 1.");
+        if (settings.DefaultProfitMultiplier < 1.25m) throw new ArgumentException("El margen de ganancia debe ser igual o mayor al 25%.");
         if (settings.DecimalPlaces is < 0 or > 4) throw new ArgumentException("Los decimales deben estar entre 0 y 4.");
         var values = new Dictionary<string, string>
         {

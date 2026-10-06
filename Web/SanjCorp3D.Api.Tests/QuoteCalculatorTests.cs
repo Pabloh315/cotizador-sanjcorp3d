@@ -34,17 +34,17 @@ public sealed class QuoteCalculatorTests
     [Fact]
     public void Converts_resin_grams_to_liters_using_density()
     {
-        var request = new QuoteRequest("Cliente", "Figura", 1, 1m, 2, 0m, 1m, "",
+        var request = new QuoteRequest("Cliente", "Figura", 1, 1m, 2, 0m, 1.25m, "",
             [new ConsumableUsageRequest(1, 120m)], []);
         var resin = Consumable("Resina", 300m, 1.2m);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1m, 0m, .01m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.25m, 0m, .01m, 2);
 
         var result = QuoteCalculator.Calculate(request, Printer(0m),
             [new QuoteCalculator.ConsumableLine(resin, 120m)], [], settings);
 
         Assert.Equal(240m, result.TotalWeight);
         Assert.Equal(60m, result.MaterialCost);
-        Assert.Equal(60m, result.RecommendedPrice);
+        Assert.Equal(75m, result.RecommendedPrice);
     }
 
     [Fact]
