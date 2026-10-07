@@ -19,9 +19,12 @@ const minProfitMargin = 25
 const marginToMultiplier = (margin: number) => Number((1 + Math.max(minProfitMargin, Number.isFinite(margin) ? margin : minProfitMargin) / 100).toFixed(4))
 const multiplierToMargin = (multiplier: number) => Number(Math.max(minProfitMargin, ((Number.isFinite(multiplier) ? multiplier : 1.25) - 1) * 100).toFixed(2))
 type AddressResult = { display_name: string; lat: string; lon: string }
+type RouteInfo = { kilometers: number; cost: number; durationMinutes: number }
+type OriginPoint = { latitude: number; longitude: number }
 const mapZoom = 14
 const tileSize = 256
 const defaultMapCenter = { lat: -17.7833, lng: -63.1821 }
+const deliveryCostPerKm = 3.20
 
 function latLngToPoint(lat: number, lng: number, zoom = mapZoom) {
   const scale = tileSize * 2 ** zoom
@@ -88,6 +91,9 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [newProfitCostPercent, setNewProfitCostPercent] = useState(0)
   const [addressResults, setAddressResults] = useState<AddressResult[]>([])
   const [addressBusy, setAddressBusy] = useState(false)
+  const [originPoint, setOriginPoint] = useState<OriginPoint>()
+  const [routeInfo, setRouteInfo] = useState<RouteInfo>()
+  const [routeBusy, setRouteBusy] = useState(false)
 
   useEffect(() => {
     Promise.all([api.printers(), api.consumables(), api.materials(), api.settings(), api.products()])
@@ -133,7 +139,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
 
   function invalidate() { setCalculation(undefined); setSaved(undefined); setSold(false); setSuccess('') }
   function update<K extends keyof BaseForm>(key: K, value: BaseForm[K]) { setForm(current => ({ ...current, [key]: value })); invalidate() }
-  function updateLocation(latitude: number, longitude: number, address = form.address) { setForm(current => ({ ...current, latitude, longitude, address })); invalidate() }
+  function updateLocation(latitude: number, longitude: number, address = form.address) { setForm(current => ({ ...current, latitude, longitude, address })); setRouteInfo(undefined); invalidate() }
   function updateProfitMargin(percent: number) { update('profitMultiplier', marginToMultiplier(percent)) }
   function updateProfitCost(id: string, percent: number) { setProfitCosts(current => current.map(line => line.id === id ? { ...line, percent: clampPercent(percent) } : line)); invalidate() }
   function removeProfitCost(id: string) { setProfitCosts(current => current.filter(line => line.id !== id || line.fixed)); invalidate() }
@@ -171,6 +177,39 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     finally { setAddressBusy(false) }
   }
 
+  function useCurrentLocationForRoute() {
+    if (!navigator.geolocation) { setError('Tu navegador no permite obtener ubicacion.'); return }
+    setRouteBusy(true); setError('')
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        const origin = { latitude: position.coords.latitude, longitude: position.coords.longitude }
+        setOriginPoint(origin)
+        void calculateRoute(origin)
+      },
+      () => { setRouteBusy(false); setError('No pude obtener tu ubicacion. Revisa los permisos del navegador.') },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    )
+  }
+
+  async function calculateRoute(origin = originPoint) {
+    if (!origin) { useCurrentLocationForRoute(); return }
+    setRouteBusy(true); setError('')
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${form.longitude},${form.latitude}?overview=false&alternatives=false&steps=false`
+      const response = await fetch(url, { headers: { Accept: 'application/json' } })
+      if (!response.ok) throw new Error('No se pudo calcular la ruta por recorrido.')
+      const payload = await response.json() as { routes?: Array<{ distance: number; duration: number }> }
+      const route = payload.routes?.[0]
+      if (!route) throw new Error('No encontre una ruta disponible hasta esa ubicacion.')
+      const kilometers = Number((route.distance / 1000).toFixed(2))
+      const cost = Number((kilometers * deliveryCostPerKm).toFixed(2))
+      const durationMinutes = Number((route.duration / 60).toFixed(0))
+      setRouteInfo({ kilometers, cost, durationMinutes })
+      update('transportCost', cost)
+      setSuccess(`Transporte calculado: ${kilometers} km por recorrido, ${cost.toFixed(2)} Bs.`)
+    } catch (reason) { setError((reason as Error).message) }
+    finally { setRouteBusy(false) }
+  }
   function setMapPin(event: MouseEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect()
     const x = mapData.startX + event.clientX - rect.left
@@ -277,6 +316,11 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
               <div className="map-pin"><MapPin size={30} fill="currentColor" /></div>
               <span className="map-hint">Toca el mapa para mover el pin</span>
             </div>
+            <div className="route-tools">
+              <button type="button" className="secondary" disabled={routeBusy} onClick={useCurrentLocationForRoute}>Usar mi ubicacion y calcular ruta</button>
+              <button type="button" className="ghost" disabled={routeBusy || !originPoint} onClick={() => void calculateRoute()}>{routeBusy ? 'Calculando' : 'Recalcular ruta'}</button>
+            </div>
+            {routeInfo && <div className="route-summary"><div><span>Recorrido</span><strong>{routeInfo.kilometers.toFixed(2)} km</strong></div><div><span>Tiempo estimado</span><strong>{routeInfo.durationMinutes} min</strong></div><div><span>Transporte</span><strong>{money(routeInfo.cost, settings?.currencySymbol)}</strong></div><small>{deliveryCostPerKm.toFixed(2)} Bs por kilometro recorrido</small></div>}
           </div>
         </section>
 

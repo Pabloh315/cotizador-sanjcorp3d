@@ -2160,3 +2160,53 @@ body.atlas-theme-light .map-hint {
   .location-search { grid-template-columns: 1fr; }
   .mini-map { height: 230px; }
 }
+
+.route-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .55rem;
+}
+.route-tools button {
+  min-height: 36px;
+}
+.route-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .55rem;
+  padding: .75rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #081814;
+}
+.route-summary > div {
+  display: grid;
+  gap: .16rem;
+}
+.route-summary span {
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.route-summary strong {
+  color: var(--text);
+  font-size: .94rem;
+}
+.route-summary small {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: .68rem;
+}
+body.atlas-theme-light .route-summary {
+  background: #f6fbfa;
+  border-color: #cde5e0;
+}
+body.atlas-theme-light .route-summary strong {
+  color: #0b211d;
+}
+@media (max-width: 650px) {
+  .route-tools button { width: 100%; }
+  .route-summary { grid-template-columns: 1fr; }
+  .route-summary small { grid-column: auto; }
+}
