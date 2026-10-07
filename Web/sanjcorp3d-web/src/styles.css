@@ -229,6 +229,127 @@ tr.clickable { cursor: pointer; }
 .locked-panel p { color: var(--muted); line-height: 1.6; }
 
 
+.wizard-shell {
+  display: grid;
+  gap: .75rem;
+  padding: 1rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #071311;
+}
+.wizard-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.wizard-topline h2 {
+  font-size: 1.2rem;
+}
+.wizard-topline span {
+  display: block;
+  margin-top: .28rem;
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+.wizard-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #12302a;
+}
+.wizard-progress span {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #1fd6c2, #acd65a);
+  transition: width .24s ease;
+}
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .5rem;
+}
+.wizard-steps button {
+  min-width: 0;
+  min-height: 40px;
+  justify-content: flex-start;
+  padding: .52rem .62rem;
+  color: var(--muted);
+  background: transparent;
+  border-color: var(--line-soft);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+.wizard-steps button span {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--mint);
+  background: #0b201c;
+  font-size: .64rem;
+  font-weight: 850;
+}
+.wizard-steps button.active {
+  color: #031714;
+  background: #1fd6c2;
+  border-color: #1fd6c2;
+}
+.wizard-steps button.active span {
+  color: #031714;
+  background: rgba(255, 255, 255, .42);
+}
+.wizard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .85rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #071311;
+}
+.wizard-actions span {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+}
+body.atlas-theme-light .wizard-shell,
+body.atlas-theme-light .wizard-actions {
+  background: #ffffff;
+  border-color: #cde5e0;
+}
+body.atlas-theme-light .wizard-progress {
+  background: #d7ece7;
+}
+body.atlas-theme-light .wizard-steps button {
+  color: #55736d;
+  background: #ffffff;
+  border-color: #cde5e0;
+}
+body.atlas-theme-light .wizard-steps button span {
+  color: #078f83;
+  background: #e8f7f2;
+}
+body.atlas-theme-light .wizard-steps button.active {
+  color: #031714;
+  background: #1fd6c2;
+  border-color: #1fd6c2;
+}
+body.atlas-theme-light .wizard-steps button.active span {
+  color: #031714;
+  background: rgba(255, 255, 255, .6);
+}
+@media (max-width: 650px) {
+  .wizard-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wizard-actions { align-items: stretch; flex-direction: column; }
+  .wizard-actions button { width: 100%; }
+  .wizard-actions span { text-align: center; }
+}
 /* Orders */
 .orders-board { display: grid; gap: 1rem; }
 .order-printer .section-title { align-items: center; }

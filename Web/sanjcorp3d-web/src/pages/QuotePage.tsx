@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
-import { Calculator, CheckCircle2, Download, MapPin, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Calculator, CheckCircle2, Download, MapPin, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import type { BusinessSettings, Consumable, ConsumableUsage, ExtraMaterial, MaterialUsage, Printer, ProductCatalog, QuoteCalculation, QuoteRequest, QuoteSummary } from '../types'
 import { Empty, ErrorMessage, Loading, PageHeader, SuccessMessage, money, number, weight } from '../ui'
@@ -25,6 +25,12 @@ const mapZoom = 14
 const tileSize = 256
 const defaultMapCenter = { lat: -17.7833, lng: -63.1821 }
 const deliveryCostPerKm = 3.20
+const quoteWizardSteps = [
+  { title: 'Proyecto', description: 'Cliente, pieza, impresora, tiempo y entrega.' },
+  { title: 'Consumibles', description: 'Filamentos o resinas que se usaran en la impresion.' },
+  { title: 'Materiales', description: 'Materiales extra, acabados y observaciones.' },
+  { title: 'Precio', description: 'Costos operativos, transporte y margen final.' },
+] as const
 
 function latLngToPoint(lat: number, lng: number, zoom = mapZoom) {
   const scale = tileSize * 2 ** zoom
@@ -94,6 +100,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [originPoint, setOriginPoint] = useState<OriginPoint>()
   const [routeInfo, setRouteInfo] = useState<RouteInfo>()
   const [routeBusy, setRouteBusy] = useState(false)
+  const [wizardStep, setWizardStep] = useState(0)
 
   useEffect(() => {
     Promise.all([api.printers(), api.consumables(), api.materials(), api.settings(), api.products()])
@@ -136,6 +143,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   }, [settings, selectedPrinter, form.quantity, form.hours, form.minutes, consumableLines, materialLines, consumableById, materialById])
   const profitAdditionalCost = Number((estimatedBaseCost * profitPercentTotal / 100).toFixed(2))
   const mapData = useMemo(() => mapTiles(form.latitude || defaultMapCenter.lat, form.longitude || defaultMapCenter.lng, 640, 260), [form.latitude, form.longitude])
+  const wizardProgress = ((wizardStep + 1) / quoteWizardSteps.length) * 100
 
   function invalidate() { setCalculation(undefined); setSaved(undefined); setSold(false); setSuccess('') }
   function update<K extends keyof BaseForm>(key: K, value: BaseForm[K]) { setForm(current => ({ ...current, [key]: value })); invalidate() }
@@ -270,6 +278,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       setMaterialLines(source.materials.filter(line => materialById.has(line.legacyMaterialId)).map(line => ({ materialId: line.legacyMaterialId, quantity: line.quantity })))
       setCalculation({ totalWeight: source.totalWeight, materialCost: source.materialCost, electricityCost: source.electricityCost, maintenanceCost: source.maintenanceCost, preparationCost: 0, laborCost: source.laborCost, wasteCost: 0, overheadCost: source.functionalSurcharge, packagingCost: 0, transportCost: 0, additionalCost: source.additionalCost, subtotal: source.subtotal, profitAmount: source.profitAmount, taxAmount: source.taxAmount, recommendedPrice: source.recommendedPrice })
       setCustomPrice(source.recommendedPrice); setSaved(undefined); setSold(false); setSearchOpen(false); setProfitCosts(defaultProfitCosts)
+      setWizardStep(0)
       setSuccess(`Datos de ${source.orderCode} cargados como una nueva cotizacion. Puedes modificarlos antes de guardar.`)
     } catch (reason) { setError((reason as Error).message) }
     finally { setBusy(false) }
@@ -279,6 +288,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: Math.max(settings?.defaultProfitMultiplier ?? 1.4, marginToMultiplier(minProfitMargin)), maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0 })
     setProfitCosts(defaultProfitCosts); setNewProfitCostName(''); setNewProfitCostPercent(0)
     setConsumableLines([]); setMaterialLines([]); setCalculation(undefined); setSaved(undefined); setSold(false); setSelectedProduct(''); setCustomPrice(0); setError(''); setSuccess('')
+    setWizardStep(0)
   }
 
   if (loading) return <Loading label="Cargando catalogos" />
@@ -292,7 +302,21 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     {consumables.length === 0 ? <div className="alert error">Necesitas al menos un consumible activo antes de cotizar.</div> : null}
     <div className="quote-layout">
       <div className="form-stack">
-        <section className="panel">
+        <div className="wizard-shell">
+          <div className="wizard-topline">
+            <div>
+              <p className="eyebrow">PASO {wizardStep + 1} DE {quoteWizardSteps.length}</p>
+              <h2>{quoteWizardSteps[wizardStep].title}</h2>
+              <span>{quoteWizardSteps[wizardStep].description}</span>
+            </div>
+          </div>
+          <div className="wizard-progress" aria-hidden="true"><span style={{ width: `${wizardProgress}%` }} /></div>
+          <div className="wizard-steps" aria-label="Pasos del cotizador personalizado">
+            {quoteWizardSteps.map((step, index) => <button type="button" key={step.title} className={index === wizardStep ? 'active' : ''} onClick={() => setWizardStep(index)}><span>{index + 1}</span>{step.title}</button>)}
+          </div>
+        </div>
+
+        {wizardStep === 0 && <section className="panel">
           <div className="section-title"><div><span className="step">01</span><h2>Proyecto e impresin</h2></div></div>
           <div className="form-grid two">
             <label>Cliente<input value={form.customer} onChange={e => update('customer', e.target.value)} placeholder="Nombre del cliente" /></label>
@@ -322,9 +346,9 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
             </div>
             {routeInfo && <div className="route-summary"><div><span>Recorrido</span><strong>{routeInfo.kilometers.toFixed(2)} km</strong></div><div><span>Tiempo estimado</span><strong>{routeInfo.durationMinutes} min</strong></div><div><span>Transporte</span><strong>{money(routeInfo.cost, settings?.currencySymbol)}</strong></div><small>{deliveryCostPerKm.toFixed(2)} Bs por kilometro recorrido</small></div>}
           </div>
-        </section>
+        </section>}
 
-        <section className="panel">
+        {wizardStep === 1 && <section className="panel">
           <div className="section-title"><div><span className="step">02</span><h2>Filamentos y resinas</h2></div></div>
           <div className="inline-form consumable-picker">
             <label>Consumible<select value={selectedConsumable} onChange={e => setSelectedConsumable(Number(e.target.value))}>{consumables.map(x => <option key={x.id} value={x.id}>{x.name} - {x.material} - {x.color} - {weight(x.stockGrams ?? x.stockQuantity * 1000)} disp.</option>)}</select></label>
@@ -335,9 +359,9 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
             const item = consumableById.get(line.consumableId)
             return <div className="line-item" key={`${line.consumableId}-${index}`}><span className="color-dot" style={{ background: item?.color.toLowerCase() }} /><div><strong>{item?.name} - {item?.material}</strong><small>{item?.category} - {item?.color}</small></div><b>{number(line.grams)} g</b><button className="icon danger" aria-label="Quitar" onClick={() => { setConsumableLines(current => current.filter((_, i) => i !== index)); invalidate() }}><Trash2 size={16} /></button></div>
           })}</div>}
-        </section>
+        </section>}
 
-        <section className="panel">
+        {wizardStep === 2 && <section className="panel">
           <div className="section-title"><div><span className="step">03</span><h2>Materiales adicionales</h2></div></div>
           <div className="inline-form material-picker">
             <label>Material<select value={selectedMaterial} onChange={e => setSelectedMaterial(Number(e.target.value))}><option value={0}>Seleccionar</option>{materials.map(x => <option key={x.id} value={x.id}>{x.name} - {money(x.unitPrice, settings?.currencySymbol)}/{x.unit}</option>)}</select></label>
@@ -348,9 +372,9 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
           <div className="form-grid two compact-fields">
             <label className="span-2">Notas<textarea rows={3} value={form.notes} onChange={e => update('notes', e.target.value)} placeholder="Acabados, entrega, observaciones" /></label>
           </div>
-        </section>
+        </section>}
 
-        <section className="panel">
+        {wizardStep === 3 && <section className="panel">
           <div className="section-title"><div><span className="step">04</span><h2>Ganancias</h2></div></div>
           <div className="form-grid two">
             <label>Margen de ganancia final (%)<input type="number" min={minProfitMargin} step="0.01" value={profitMarginPercent} onChange={e => updateProfitMargin(Number(e.target.value))} /></label>
@@ -374,7 +398,15 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
             <button type="button" className="secondary" onClick={addProfitCost}><Plus size={17} />Agregar costo</button>
           </div>
           <div className="formula-note"><strong>Costos adicionales por porcentaje: {money(profitAdditionalCost, settings?.currencySymbol)}</strong><span>La ganancia real se aplica despues de cubrir produccion y costos operativos.</span></div>
-        </section>
+        </section>}
+
+        <div className="wizard-actions">
+          <button className="ghost" type="button" disabled={wizardStep === 0} onClick={() => setWizardStep(current => Math.max(0, current - 1))}><ArrowLeft size={16} />Atras</button>
+          <span>Paso {wizardStep + 1} de {quoteWizardSteps.length}</span>
+          {wizardStep < quoteWizardSteps.length - 1
+            ? <button type="button" onClick={() => setWizardStep(current => Math.min(quoteWizardSteps.length - 1, current + 1))}>Siguiente<ArrowRight size={16} /></button>
+            : <button className="secondary" type="button" disabled={busy || printers.length === 0 || consumables.length === 0} onClick={calculate}><Calculator size={17} />Calcular precio</button>}
+        </div>
       </div>
 
       <aside className="quote-summary panel">
