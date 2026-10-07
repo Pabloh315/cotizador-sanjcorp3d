@@ -1,4 +1,4 @@
-﻿namespace SanjCorp3D.Api.Models;
+namespace SanjCorp3D.Api.Models;
 
 public interface IActiveEntity { bool Active { get; set; } }
 public interface ITenantEntity { Guid TenantId { get; set; } }
@@ -87,6 +87,12 @@ public sealed class ProductCatalog : ITenantEntity
     public decimal FilamentGrams { get; set; }
     public decimal MaterialCost { get; set; }
     public decimal ProductionMinutes { get; set; }
+    public decimal MaintenancePercent { get; set; } = 6m;
+    public decimal PreparationPercent { get; set; } = 10m;
+    public decimal LaborPercent { get; set; } = 20m;
+    public decimal WastePercent { get; set; } = 7m;
+    public decimal OverheadPercent { get; set; } = 5m;
+    public decimal PackagingCost { get; set; }
     public decimal ProfitMultiplier { get; set; } = 3m;
     public bool Active { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
@@ -241,9 +247,3 @@ public sealed class ChatMessage : ITenantEntity
     public string? PhotoUrl { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
-
-
-
-
-
-
