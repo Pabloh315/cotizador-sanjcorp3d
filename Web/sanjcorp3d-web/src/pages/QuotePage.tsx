@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Calculator, CheckCircle2, Download, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { Calculator, CheckCircle2, Download, MapPin, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import type { BusinessSettings, Consumable, ConsumableUsage, ExtraMaterial, MaterialUsage, Printer, ProductCatalog, QuoteCalculation, QuoteRequest, QuoteSummary } from '../types'
 import { Empty, ErrorMessage, Loading, PageHeader, SuccessMessage, money, number, weight } from '../ui'
 import { confirmDialog } from '../confirm'
 
-type BaseForm = { customer: string; customerPhone: string; projectName: string; printerId: number; hours: number; minutes: number; quantity: number; additionalManualCost: number; workExtraPercent: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; transportCost: number; profitMultiplier: number; notes: string }
-const emptyForm: BaseForm = { customer: '', customerPhone: '', projectName: '', printerId: 0, hours: 0, minutes: 0, quantity: 1, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: 6, preparationPercent: 10, laborPercent: 20, wastePercent: 7, overheadPercent: 5, packagingCost: 0, transportCost: 0, profitMultiplier: 1.4, notes: '' }
+type BaseForm = { customer: string; customerPhone: string; projectName: string; address: string; latitude: number; longitude: number; printerId: number; hours: number; minutes: number; quantity: number; additionalManualCost: number; workExtraPercent: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; transportCost: number; profitMultiplier: number; notes: string }
+const emptyForm: BaseForm = { customer: '', customerPhone: '', projectName: '', address: '', latitude: -17.7833, longitude: -63.1821, printerId: 0, hours: 0, minutes: 0, quantity: 1, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: 6, preparationPercent: 10, laborPercent: 20, wastePercent: 7, overheadPercent: 5, packagingCost: 0, transportCost: 0, profitMultiplier: 1.4, notes: '' }
 type ProfitCostLine = { id: string; name: string; percent: number; fixed?: boolean }
 const defaultProfitCosts: ProfitCostLine[] = [
   { id: 'salary', name: 'Costos de salarios', percent: 0, fixed: true },
@@ -18,6 +18,44 @@ const clampPercent = (value: number) => Math.min(100, Math.max(0, Number.isFinit
 const minProfitMargin = 25
 const marginToMultiplier = (margin: number) => Number((1 + Math.max(minProfitMargin, Number.isFinite(margin) ? margin : minProfitMargin) / 100).toFixed(4))
 const multiplierToMargin = (multiplier: number) => Number(Math.max(minProfitMargin, ((Number.isFinite(multiplier) ? multiplier : 1.25) - 1) * 100).toFixed(2))
+type AddressResult = { display_name: string; lat: string; lon: string }
+const mapZoom = 14
+const tileSize = 256
+const defaultMapCenter = { lat: -17.7833, lng: -63.1821 }
+
+function latLngToPoint(lat: number, lng: number, zoom = mapZoom) {
+  const scale = tileSize * 2 ** zoom
+  const sinLat = Math.sin(lat * Math.PI / 180)
+  return {
+    x: (lng + 180) / 360 * scale,
+    y: (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale,
+  }
+}
+
+function pointToLatLng(x: number, y: number, zoom = mapZoom) {
+  const scale = tileSize * 2 ** zoom
+  const lng = x / scale * 360 - 180
+  const n = Math.PI - 2 * Math.PI * y / scale
+  const lat = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)))
+  return { lat, lng }
+}
+
+function mapTiles(lat: number, lng: number, width: number, height: number) {
+  const center = latLngToPoint(lat, lng)
+  const startX = center.x - width / 2
+  const startY = center.y - height / 2
+  const firstTileX = Math.floor(startX / tileSize)
+  const firstTileY = Math.floor(startY / tileSize)
+  const lastTileX = Math.floor((startX + width) / tileSize)
+  const lastTileY = Math.floor((startY + height) / tileSize)
+  const tiles: Array<{ x: number; y: number; left: number; top: number; url: string }> = []
+  for (let x = firstTileX; x <= lastTileX; x += 1) {
+    for (let y = firstTileY; y <= lastTileY; y += 1) {
+      tiles.push({ x, y, left: x * tileSize - startX, top: y * tileSize - startY, url: `https://tile.openstreetmap.org/${mapZoom}/${x}/${y}.png` })
+    }
+  }
+  return { tiles, startX, startY }
+}
 
 export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [printers, setPrinters] = useState<Printer[]>([])
@@ -48,6 +86,8 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [profitCosts, setProfitCosts] = useState<ProfitCostLine[]>(defaultProfitCosts)
   const [newProfitCostName, setNewProfitCostName] = useState('')
   const [newProfitCostPercent, setNewProfitCostPercent] = useState(0)
+  const [addressResults, setAddressResults] = useState<AddressResult[]>([])
+  const [addressBusy, setAddressBusy] = useState(false)
 
   useEffect(() => {
     Promise.all([api.printers(), api.consumables(), api.materials(), api.settings(), api.products()])
@@ -89,9 +129,11 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     return Math.max(0, consumableCost + materialCost + electricity + maintenance)
   }, [settings, selectedPrinter, form.quantity, form.hours, form.minutes, consumableLines, materialLines, consumableById, materialById])
   const profitAdditionalCost = Number((estimatedBaseCost * profitPercentTotal / 100).toFixed(2))
+  const mapData = useMemo(() => mapTiles(form.latitude || defaultMapCenter.lat, form.longitude || defaultMapCenter.lng, 640, 260), [form.latitude, form.longitude])
 
   function invalidate() { setCalculation(undefined); setSaved(undefined); setSold(false); setSuccess('') }
   function update<K extends keyof BaseForm>(key: K, value: BaseForm[K]) { setForm(current => ({ ...current, [key]: value })); invalidate() }
+  function updateLocation(latitude: number, longitude: number, address = form.address) { setForm(current => ({ ...current, latitude, longitude, address })); invalidate() }
   function updateProfitMargin(percent: number) { update('profitMultiplier', marginToMultiplier(percent)) }
   function updateProfitCost(id: string, percent: number) { setProfitCosts(current => current.map(line => line.id === id ? { ...line, percent: clampPercent(percent) } : line)); invalidate() }
   function removeProfitCost(id: string) { setProfitCosts(current => current.filter(line => line.id !== id || line.fixed)); invalidate() }
@@ -114,10 +156,34 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     setMaterialLines(current => [...current, { materialId: selectedMaterial, quantity: materialQuantity }]); setMaterialQuantity(1); setError(''); invalidate()
   }
 
-  function request(): QuoteRequest {
-    return { customer: form.customer, customerPhone: form.customerPhone, projectName: form.projectName, productName: selectedProduct, printerId: form.printerId, printHours: form.hours + form.minutes / 60, quantity: form.quantity, additionalManualCost: profitAdditionalCost, profitMultiplier: Math.max(form.profitMultiplier, marginToMultiplier(minProfitMargin)), notes: form.notes, consumables: consumableLines, materials: materialLines, maintenancePercent: form.maintenancePercent, preparationPercent: form.preparationPercent, laborPercent: form.laborPercent, wastePercent: form.wastePercent, overheadPercent: form.overheadPercent, packagingCost: form.packagingCost, transportCost: form.transportCost }
+  async function searchAddress() {
+    const query = form.address.trim()
+    if (!query) { setError('Escribe una direccion para buscarla en el mapa.'); return }
+    setAddressBusy(true); setError('')
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&q=${encodeURIComponent(query)}`, { headers: { Accept: 'application/json' } })
+      if (!response.ok) throw new Error('No se pudo buscar la direccion.')
+      const results = await response.json() as AddressResult[]
+      setAddressResults(results)
+      if (results[0]) updateLocation(Number(results[0].lat), Number(results[0].lon), results[0].display_name)
+      else setError('No encontre esa direccion. Puedes mover el pin manualmente en el mapa.')
+    } catch (reason) { setError((reason as Error).message) }
+    finally { setAddressBusy(false) }
   }
 
+  function setMapPin(event: MouseEvent<HTMLDivElement>) {
+    const rect = event.currentTarget.getBoundingClientRect()
+    const x = mapData.startX + event.clientX - rect.left
+    const y = mapData.startY + event.clientY - rect.top
+    const next = pointToLatLng(x, y)
+    updateLocation(Number(next.lat.toFixed(6)), Number(next.lng.toFixed(6)))
+  }
+
+  function request(): QuoteRequest {
+    const locationNotes = form.address.trim() ? `Direccion: ${form.address.trim()}\nUbicacion: ${form.latitude.toFixed(6)}, ${form.longitude.toFixed(6)}\nMapa: https://www.openstreetmap.org/?mlat=${form.latitude.toFixed(6)}&mlon=${form.longitude.toFixed(6)}#map=17/${form.latitude.toFixed(6)}/${form.longitude.toFixed(6)}` : ''
+    const quoteNotes = [locationNotes, form.notes].filter(Boolean).join('\n\n')
+    return { customer: form.customer, customerPhone: form.customerPhone, projectName: form.projectName, productName: selectedProduct, printerId: form.printerId, printHours: form.hours + form.minutes / 60, quantity: form.quantity, additionalManualCost: profitAdditionalCost, profitMultiplier: Math.max(form.profitMultiplier, marginToMultiplier(minProfitMargin)), notes: quoteNotes, consumables: consumableLines, materials: materialLines, maintenancePercent: form.maintenancePercent, preparationPercent: form.preparationPercent, laborPercent: form.laborPercent, wastePercent: form.wastePercent, overheadPercent: form.overheadPercent, packagingCost: form.packagingCost, transportCost: form.transportCost }
+  }
   async function calculate() {
     setBusy(true); setError(''); setSuccess('')
     try { setCalculation(await api.calculateQuote(request())) }
@@ -159,7 +225,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       const source = await api.quote(id)
       const totalMinutes = Math.round(source.printHours * 60)
       const printer = printers.find(item => item.name === source.printerName)
-      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0, profitMultiplier: Math.max(source.profitMultiplier, marginToMultiplier(minProfitMargin)), notes: source.notes })
+      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, address: '', latitude: defaultMapCenter.lat, longitude: defaultMapCenter.lng, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0, profitMultiplier: Math.max(source.profitMultiplier, marginToMultiplier(minProfitMargin)), notes: source.notes })
       setSelectedProduct(source.productName ?? '')
       setConsumableLines(source.consumables.filter(line => consumableById.has(line.legacyConsumableId)).map(line => ({ consumableId: line.legacyConsumableId, grams: line.grams })))
       setMaterialLines(source.materials.filter(line => materialById.has(line.legacyMaterialId)).map(line => ({ materialId: line.legacyMaterialId, quantity: line.quantity })))
@@ -198,6 +264,19 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
             <label>Horas<input type="number" min="0" step="1" value={form.hours} onChange={e => update('hours', Number(e.target.value))} /></label>
             <label>Minutos<input type="number" min="0" max="59" step="1" value={form.minutes} onChange={e => update('minutes', Number(e.target.value))} /></label>
             <label>Cantidad de piezas<input type="number" min="1" step="1" value={form.quantity} onChange={e => update('quantity', Number(e.target.value))} /></label>
+          </div>
+          <div className="location-picker">
+            <div className="location-header"><div><p className="eyebrow">ENTREGA</p><h3>Direccion y ubicacion</h3></div><span>{form.latitude.toFixed(5)}, {form.longitude.toFixed(5)}</span></div>
+            <div className="inline-form location-search">
+              <label className="search-field"><Search size={17} /><input value={form.address} onChange={e => update('address', e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void searchAddress() } }} placeholder="Buscar direccion, zona o referencia" /></label>
+              <button type="button" className="secondary" disabled={addressBusy} onClick={searchAddress}>{addressBusy ? 'Buscando' : 'Buscar'}</button>
+            </div>
+            {addressResults.length > 0 && <div className="address-results">{addressResults.map(item => <button type="button" key={`${item.lat}-${item.lon}`} onClick={() => updateLocation(Number(item.lat), Number(item.lon), item.display_name)}>{item.display_name}</button>)}</div>}
+            <div className="mini-map" role="button" tabIndex={0} onClick={setMapPin} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault() } }} aria-label="Mapa para marcar la ubicacion de entrega">
+              {mapData.tiles.map(tile => <img key={`${tile.x}-${tile.y}`} src={tile.url} alt="" style={{ left: tile.left, top: tile.top }} draggable={false} />)}
+              <div className="map-pin"><MapPin size={30} fill="currentColor" /></div>
+              <span className="map-hint">Toca el mapa para mover el pin</span>
+            </div>
           </div>
         </section>
 
