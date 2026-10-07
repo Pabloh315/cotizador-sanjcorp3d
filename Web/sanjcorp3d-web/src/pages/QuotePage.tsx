@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type PointerEvent } from 'react'
 import { ArrowLeft, ArrowRight, Calculator, CheckCircle2, Download, MapPin, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import type { BusinessSettings, Consumable, ConsumableUsage, ExtraMaterial, MaterialUsage, Printer, ProductCatalog, QuoteCalculation, QuoteRequest, QuoteSummary } from '../types'
@@ -21,6 +21,8 @@ const multiplierToMargin = (multiplier: number) => Number(Math.max(minProfitMarg
 type AddressResult = { display_name: string; lat: string; lon: string }
 type RouteInfo = { kilometers: number; cost: number; durationMinutes: number }
 type OriginPoint = { latitude: number; longitude: number }
+type MapDragState = { pointerId: number; startClientX: number; startClientY: number; startPointX: number; startPointY: number; moved: boolean }
+type MapDragOffset = { x: number; y: number }
 const mapZoom = 14
 const tileSize = 256
 const defaultMapCenter = { lat: -17.7833, lng: -63.1821 }
@@ -100,6 +102,8 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [originPoint, setOriginPoint] = useState<OriginPoint>()
   const [routeInfo, setRouteInfo] = useState<RouteInfo>()
   const [routeBusy, setRouteBusy] = useState(false)
+  const [mapDrag, setMapDrag] = useState<MapDragState | null>(null)
+  const [mapOffset, setMapOffset] = useState<MapDragOffset>({ x: 0, y: 0 })
   const [wizardStep, setWizardStep] = useState(0)
 
   useEffect(() => {
@@ -218,12 +222,41 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     } catch (reason) { setError((reason as Error).message) }
     finally { setRouteBusy(false) }
   }
-  function setMapPin(event: MouseEvent<HTMLDivElement>) {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const x = mapData.startX + event.clientX - rect.left
-    const y = mapData.startY + event.clientY - rect.top
+  function moveMapPin(clientX: number, clientY: number, target: HTMLDivElement) {
+    const rect = target.getBoundingClientRect()
+    const x = mapData.startX + clientX - rect.left
+    const y = mapData.startY + clientY - rect.top
     const next = pointToLatLng(x, y)
     updateLocation(Number(next.lat.toFixed(6)), Number(next.lng.toFixed(6)))
+  }
+  function startMapDrag(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault()
+    const center = latLngToPoint(form.latitude || defaultMapCenter.lat, form.longitude || defaultMapCenter.lng)
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setMapDrag({ pointerId: event.pointerId, startClientX: event.clientX, startClientY: event.clientY, startPointX: center.x, startPointY: center.y, moved: false })
+  }
+  function dragMap(event: PointerEvent<HTMLDivElement>) {
+    if (!mapDrag || mapDrag.pointerId !== event.pointerId) return
+    const dx = event.clientX - mapDrag.startClientX
+    const dy = event.clientY - mapDrag.startClientY
+    const moved = mapDrag.moved || Math.abs(dx) > 3 || Math.abs(dy) > 3
+    if (!moved) return
+    setMapOffset({ x: dx, y: dy })
+    setMapDrag(current => current && current.pointerId === event.pointerId ? { ...current, moved: true } : current)
+  }
+  function finishMapDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!mapDrag || mapDrag.pointerId !== event.pointerId) return
+    if (mapDrag.moved) {
+      const dx = event.clientX - mapDrag.startClientX
+      const dy = event.clientY - mapDrag.startClientY
+      const next = pointToLatLng(mapDrag.startPointX - dx, mapDrag.startPointY - dy)
+      updateLocation(Number(next.lat.toFixed(6)), Number(next.lng.toFixed(6)))
+    } else {
+      moveMapPin(event.clientX, event.clientY, event.currentTarget)
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
+    setMapDrag(null)
+    setMapOffset({ x: 0, y: 0 })
   }
 
   function request(): QuoteRequest {
@@ -335,10 +368,10 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
               <button type="button" className="secondary" disabled={addressBusy} onClick={searchAddress}>{addressBusy ? 'Buscando' : 'Buscar'}</button>
             </div>
             {addressResults.length > 0 && <div className="address-results">{addressResults.map(item => <button type="button" key={`${item.lat}-${item.lon}`} onClick={() => updateLocation(Number(item.lat), Number(item.lon), item.display_name)}>{item.display_name}</button>)}</div>}
-            <div className="mini-map" role="button" tabIndex={0} onClick={setMapPin} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault() } }} aria-label="Mapa para marcar la ubicacion de entrega">
-              {mapData.tiles.map(tile => <img key={`${tile.x}-${tile.y}`} src={tile.url} alt="" style={{ left: tile.left, top: tile.top }} draggable={false} />)}
+            <div className={`mini-map ${mapDrag ? 'dragging' : ''}`} role="button" tabIndex={0} onPointerDown={startMapDrag} onPointerMove={dragMap} onPointerUp={finishMapDrag} onPointerCancel={finishMapDrag} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault() } }} aria-label="Mapa para marcar la ubicacion de entrega">
+              {mapData.tiles.map(tile => <img key={`${tile.x}-${tile.y}`} src={tile.url} alt="" style={{ left: tile.left, top: tile.top, transform: `translate(${mapOffset.x}px, ${mapOffset.y}px)` }} draggable={false} />)}
               <div className="map-pin"><MapPin size={30} fill="currentColor" /></div>
-              <span className="map-hint">Toca el mapa para mover el pin</span>
+              <span className="map-hint">Manten clic y arrastra el mapa para panear; suelta para fijar</span>
             </div>
             <div className="route-tools">
               <button type="button" className="secondary" disabled={routeBusy} onClick={useCurrentLocationForRoute}>Usar mi ubicacion y calcular ruta</button>

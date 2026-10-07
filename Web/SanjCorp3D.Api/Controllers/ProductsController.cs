@@ -26,7 +26,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
     {
         var validation = ValidateProduct(request, out var name);
         if (validation is not null) return validation;
-        var item = new ProductCatalog { Name = name, Description = request.Description?.Trim() ?? string.Empty, MaterialType = request.MaterialType?.Trim() ?? string.Empty, FilamentGrams = request.FilamentGrams, MaterialCost = request.MaterialCost, ProductionMinutes = request.ProductionMinutes, MaintenancePercent = request.MaintenancePercent, PreparationPercent = request.PreparationPercent, LaborPercent = request.LaborPercent, WastePercent = request.WastePercent, OverheadPercent = request.OverheadPercent, PackagingCost = 0, ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier, Active = true };
+        var item = new ProductCatalog { Name = name, Description = request.Description?.Trim() ?? string.Empty, MaterialType = request.MaterialType?.Trim() ?? string.Empty, FilamentGrams = request.FilamentGrams, MaterialCost = request.MaterialCost, AdditionalMaterialCost = request.AdditionalMaterialCost, ProductionMinutes = request.ProductionMinutes, MaintenancePercent = request.MaintenancePercent, PreparationPercent = request.PreparationPercent, LaborPercent = request.LaborPercent, WastePercent = request.WastePercent, OverheadPercent = request.OverheadPercent, PackagingCost = 0, ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier, Active = true };
         db.ProductCatalogs.Add(item);
         try { await db.SaveChangesAsync(ct); return Ok(ToDto(item)); }
         catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya est registrado." }); }
@@ -44,6 +44,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         item.MaterialType = request.MaterialType?.Trim() ?? string.Empty;
         item.FilamentGrams = request.FilamentGrams;
         item.MaterialCost = request.MaterialCost;
+        item.AdditionalMaterialCost = request.AdditionalMaterialCost;
         item.ProductionMinutes = request.ProductionMinutes;
         item.MaintenancePercent = request.MaintenancePercent;
         item.PreparationPercent = request.PreparationPercent;
@@ -204,7 +205,8 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         {
             var pricePerKg = selectedPricePerKg > 0 ? selectedPricePerKg : materialPrices.TryGetValue(materialType, out var price) ? price : 0m;
             var calculated = product.FilamentGrams / 1000m * pricePerKg;
-            return calculated > 0 ? calculated : product.MaterialCost;
+            var baseMaterial = calculated > 0 ? calculated : product.MaterialCost;
+            return baseMaterial + Math.Max(0, product.AdditionalMaterialCost);
         }
         var material = products.Sum(x => MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity);
         var electricity = averagePower / 1000m * printHours * config.ElectricityPerKwh;
@@ -238,6 +240,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         name = request.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name)) return BadRequest(new { message = "El nombre del producto es obligatorio." });
         if (request.MaterialCost < 0) return BadRequest(new { message = "El costo de produccin no puede ser negativo." });
+        if (request.AdditionalMaterialCost < 0) return BadRequest(new { message = "El costo de materiales extra no puede ser negativo." });
         if (request.FilamentGrams < 0) return BadRequest(new { message = "Los gramos de filamento no pueden ser negativos." });
         if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de produccin no puede ser negativo." });
         if (request.MaintenancePercent < 0 || request.PreparationPercent < 0 || request.LaborPercent < 0 || request.WastePercent < 0 || request.OverheadPercent < 0) return BadRequest(new { message = "Los porcentajes no pueden ser negativos." });
@@ -245,5 +248,5 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         return null;
     }
 
-    private static ProductCatalogDto ToDto(ProductCatalog item) => new(item.Id, item.Name, item.Description, item.MaterialType, item.FilamentGrams, item.MaterialCost, item.ProductionMinutes, item.MaintenancePercent, item.PreparationPercent, item.LaborPercent, item.WastePercent, item.OverheadPercent, item.PackagingCost, item.ProfitMultiplier, item.Active);
+    private static ProductCatalogDto ToDto(ProductCatalog item) => new(item.Id, item.Name, item.Description, item.MaterialType, item.FilamentGrams, item.MaterialCost, item.AdditionalMaterialCost, item.ProductionMinutes, item.MaintenancePercent, item.PreparationPercent, item.LaborPercent, item.WastePercent, item.OverheadPercent, item.PackagingCost, item.ProfitMultiplier, item.Active);
 }

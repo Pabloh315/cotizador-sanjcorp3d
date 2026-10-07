@@ -2227,8 +2227,13 @@ body.atlas-theme-light .margin-shortcuts button:hover:not(:disabled) {
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   background: #0b1815;
-  cursor: crosshair;
+  cursor: grab;
   isolation: isolate;
+  touch-action: none;
+  user-select: none;
+}
+.mini-map.dragging {
+  cursor: grabbing;
 }
 .mini-map img {
   position: absolute;
@@ -2288,6 +2293,18 @@ body.atlas-theme-light .map-hint {
   gap: .55rem;
 }
 .route-tools button {
+  min-height: 36px;
+}
+
+.compact-input {
+  min-width: 180px;
+  display: grid;
+  gap: .35rem;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 800;
+}
+.compact-input input {
   min-height: 36px;
 }
 .route-summary {

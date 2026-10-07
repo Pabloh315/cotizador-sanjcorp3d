@@ -86,6 +86,7 @@ public sealed class ProductCatalog : ITenantEntity
     public string MaterialType { get; set; } = string.Empty;
     public decimal FilamentGrams { get; set; }
     public decimal MaterialCost { get; set; }
+    public decimal AdditionalMaterialCost { get; set; }
     public decimal ProductionMinutes { get; set; }
     public decimal MaintenancePercent { get; set; } = 6m;
     public decimal PreparationPercent { get; set; } = 10m;
