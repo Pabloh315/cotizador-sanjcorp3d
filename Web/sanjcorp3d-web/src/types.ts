@@ -91,7 +91,7 @@ export type Tenant = { id: string; name: string; slug: string; kind: string; log
 export type ChatMessage = { id: number; tenantId: string; senderUserId: string; senderName: string; body: string; photoUrl?: string; createdAtUtc: string }
 export type ProductCatalog = { id: number; name: string; description: string; materialType: string; filamentGrams: number; materialCost: number; productionMinutes: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; profitMultiplier: number; active: boolean }
 export type StoreQuoteLine = { productId: number; quantity: number; materialType?: string; consumableId?: number }
-export type StoreQuoteRequest = { customer: string; customerPhone?: string; projectName?: string; printerIds: number[]; notes?: string; lines: StoreQuoteLine[]; transportCost?: number }
+export type StoreQuoteRequest = { customer: string; customerPhone?: string; projectName?: string; printerIds: number[]; notes?: string; lines: StoreQuoteLine[]; packagingCost?: number; transportCost?: number }
 export type StoreQuoteCalculation = { totalQuantity: number; printHours: number; materialCost: number; electricityCost: number; maintenanceCost: number; preparationCost: number; laborCost: number; wasteCost: number; overheadCost: number; packagingCost: number; transportCost: number; subtotal: number; profitAmount: number; taxAmount: number; recommendedPrice: number }
 export type ConsumableMaterialType = { id: number; name: string; active: boolean }
 

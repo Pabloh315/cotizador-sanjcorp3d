@@ -26,7 +26,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
     {
         var validation = ValidateProduct(request, out var name);
         if (validation is not null) return validation;
-        var item = new ProductCatalog { Name = name, Description = request.Description?.Trim() ?? string.Empty, MaterialType = request.MaterialType?.Trim() ?? string.Empty, FilamentGrams = request.FilamentGrams, MaterialCost = request.MaterialCost, ProductionMinutes = request.ProductionMinutes, MaintenancePercent = request.MaintenancePercent, PreparationPercent = request.PreparationPercent, LaborPercent = request.LaborPercent, WastePercent = request.WastePercent, OverheadPercent = request.OverheadPercent, PackagingCost = request.PackagingCost, ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier, Active = true };
+        var item = new ProductCatalog { Name = name, Description = request.Description?.Trim() ?? string.Empty, MaterialType = request.MaterialType?.Trim() ?? string.Empty, FilamentGrams = request.FilamentGrams, MaterialCost = request.MaterialCost, ProductionMinutes = request.ProductionMinutes, MaintenancePercent = request.MaintenancePercent, PreparationPercent = request.PreparationPercent, LaborPercent = request.LaborPercent, WastePercent = request.WastePercent, OverheadPercent = request.OverheadPercent, PackagingCost = 0, ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier, Active = true };
         db.ProductCatalogs.Add(item);
         try { await db.SaveChangesAsync(ct); return Ok(ToDto(item)); }
         catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya est registrado." }); }
@@ -50,7 +50,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         item.LaborPercent = request.LaborPercent;
         item.WastePercent = request.WastePercent;
         item.OverheadPercent = request.OverheadPercent;
-        item.PackagingCost = request.PackagingCost;
+        item.PackagingCost = 0;
         item.ProfitMultiplier = request.ProfitMultiplier <= 0 ? 3m : request.ProfitMultiplier;
         item.Active = true;
         try { await db.SaveChangesAsync(ct); return Ok(ToDto(item)); }
@@ -214,7 +214,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var labor = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.LaborPercent));
         var waste = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.WastePercent));
         var overhead = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.OverheadPercent));
-        var packaging = products.Sum(x => x.Product.PackagingCost * x.Quantity);
+        var packaging = Math.Max(0, request.PackagingCost ?? 0);
         var transport = Math.Max(0, request.TransportCost ?? config.TransportCost);
         var subtotal = material + electricity + maintenance + preparation + labor + waste + overhead + packaging + transport;
         var multiplied = products.Sum(x =>
@@ -223,9 +223,9 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
             var lineMaterial = MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity;
             var lineElectricity = averagePower / 1000m * lineHours * config.ElectricityPerKwh;
             var lineBase = lineMaterial + lineElectricity;
-            var lineCosts = lineBase + config.MaintenancePerPrint * x.Quantity + Percent(lineBase, x.Product.MaintenancePercent) + Percent(lineBase, x.Product.PreparationPercent) + Percent(lineBase, x.Product.LaborPercent) + Percent(lineBase, x.Product.WastePercent) + Percent(lineBase, x.Product.OverheadPercent) + x.Product.PackagingCost * x.Quantity;
+            var lineCosts = lineBase + config.MaintenancePerPrint * x.Quantity + Percent(lineBase, x.Product.MaintenancePercent) + Percent(lineBase, x.Product.PreparationPercent) + Percent(lineBase, x.Product.LaborPercent) + Percent(lineBase, x.Product.WastePercent) + Percent(lineBase, x.Product.OverheadPercent);
             return lineCosts * x.Product.ProfitMultiplier;
-        }) + transport;
+        }) + packaging + transport;
         var profit = multiplied - subtotal;
         var tax = multiplied * config.TaxPercent / 100m;
         var recommended = config.RoundTo <= 0 ? multiplied + tax : decimal.Round((multiplied + tax) / config.RoundTo, 0, MidpointRounding.AwayFromZero) * config.RoundTo;
@@ -241,7 +241,6 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         if (request.FilamentGrams < 0) return BadRequest(new { message = "Los gramos de filamento no pueden ser negativos." });
         if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de produccin no puede ser negativo." });
         if (request.MaintenancePercent < 0 || request.PreparationPercent < 0 || request.LaborPercent < 0 || request.WastePercent < 0 || request.OverheadPercent < 0) return BadRequest(new { message = "Los porcentajes no pueden ser negativos." });
-        if (request.PackagingCost < 0) return BadRequest(new { message = "El costo de empaque no puede ser negativo." });
         if (request.ProfitMultiplier < 1.25m) return BadRequest(new { message = "La ganancia final debe ser al menos 25%." });
         return null;
     }
