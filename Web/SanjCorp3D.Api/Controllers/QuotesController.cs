@@ -399,15 +399,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             Text(bold ? "F2" : "F1", 10.5m, 405, y, Money(amount, currencySymbol));
             y -= 30;
         }
-        Row("Consumibles", quote.MaterialCost);
-        Row("Electricidad", quote.ElectricityCost, shade: true);
-        Row("Mantenimiento", quote.MaintenanceCost);
-        Row("Preparacion, empaque, transporte y extras", quote.AdditionalCost, shade: true);
-        Row("Salarios", quote.LaborCost);
-        Row("Merma y administracion", quote.FunctionalSurcharge, shade: true);
-        Row("Subtotal de costos", quote.Subtotal, true);
-        Row("Ganancia", quote.ProfitAmount, shade: true);
-        Row("Impuesto", quote.TaxAmount);
+        Row("Servicio de impresion 3D", quote.RecommendedPrice, true);
 
         Fill(.90m, .985m, .97m); Rect(42, 218, 511, 62);
         Stroke(.13m, .78m, .72m); Rect(42, 218, 511, 62, true);
@@ -415,16 +407,8 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         Text("F2", 26, 352, 242, Money(quote.RecommendedPrice, currencySymbol), .02m, .31m, .29m);
         Fill(.13m, .78m, .72m); Rect(42, 214, 511, 4);
 
-        Text("F2", 10.5m, 42, 178, "RESUMEN DE MATERIALES", .02m, .41m, .37m);
-        var materialSummary = quote.Consumables.OrderBy(x => x.Id).Take(3).Select(x => $"{x.Name} - {x.Material} - {x.Color}: {x.Grams:0.##} g/pieza").ToList();
-        materialSummary.AddRange(quote.Materials.OrderBy(x => x.Id).Take(Math.Max(0, 4 - materialSummary.Count)).Select(x => $"{x.Name}: {x.Quantity:0.##} x {Money(x.UnitPrice, currencySymbol)}"));
-        if (materialSummary.Count == 0) materialSummary.Add("Sin materiales adicionales registrados.");
-        var lineY = 158m;
-        foreach (var line in materialSummary.Take(4))
-        {
-            Text("F1", 8.5m, 52, lineY, TrimText(line, 84), .25m, .36m, .34m);
-            lineY -= 14;
-        }
+        Text("F2", 10.5m, 42, 178, "DETALLE", .02m, .41m, .37m);
+        Text("F1", 9m, 52, 156, "El precio incluye materiales, produccion y los servicios solicitados.", .25m, .36m, .34m);
 
         Stroke(.72m, .88m, .84m); Line(42, 70, 553, 70);
         Text("F1", 8, 42, 52, "Este documento corresponde a una cotizacion y no reemplaza una factura fiscal.", .34m, .43m, .41m);

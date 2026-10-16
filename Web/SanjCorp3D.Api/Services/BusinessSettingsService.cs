@@ -8,10 +8,7 @@ namespace SanjCorp3D.Api.Services;
 
 public sealed class BusinessSettingsService(AppDbContext db)
 {
-    // Keep the spreadsheet's neutral defaults. Maintenance and rounding are
-    // optional inputs, so they must not change a quote unless the user sets
-    // them explicitly in Configuracion.
-    public static BusinessSettingsDto Defaults => new("SANJ CORP 3D", "Bolivianos", "Bs", 1.10m, 0m, 6m, 10m, 20m, 7m, 5m, 0m, 0m, 1.40m, 0m, 0m, 2);
+    public static BusinessSettingsDto Defaults => new("SANJ CORP 3D", "Bolivianos", "Bs", 1.10m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 3m, 0m, 1m, 2);
 
     public async Task<BusinessSettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -33,7 +30,7 @@ public sealed class BusinessSettingsService(AppDbContext db)
     public async Task SaveAsync(BusinessSettingsDto settings, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(settings.BusinessName) || string.IsNullOrWhiteSpace(settings.CurrencySymbol)) throw new ArgumentException("El negocio y el simbolo monetario son obligatorios.");
-        if (settings.ElectricityPerKwh < 0 || settings.MaintenancePerPrint < 0 || settings.TaxPercent < 0 || settings.RoundTo < 0 || settings.PackagingCost < 0 || settings.TransportCost < 0) throw new ArgumentException("Los costos no pueden ser negativos.");
+        if (settings.ElectricityPerKwh < 0 || settings.MaintenancePerPrint is < 1m or > 3m || settings.TaxPercent < 0 || settings.RoundTo < 0 || settings.PackagingCost < 0 || settings.TransportCost < 0) throw new ArgumentException("Los costos no pueden ser negativos.");
         if (settings.MaintenancePercent < 0 || settings.PreparationPercent < 0 || settings.LaborPercent < 0 || settings.WastePercent < 0 || settings.OverheadPercent < 0) throw new ArgumentException("Los porcentajes no pueden ser negativos.");
         if (settings.DefaultProfitMultiplier < 1.25m) throw new ArgumentException("El margen de ganancia debe ser igual o mayor al 25%.");
         if (settings.DecimalPlaces is < 0 or > 4) throw new ArgumentException("Los decimales deben estar entre 0 y 4.");

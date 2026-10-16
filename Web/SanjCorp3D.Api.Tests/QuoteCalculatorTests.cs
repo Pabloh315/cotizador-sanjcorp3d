@@ -7,7 +7,7 @@ namespace SanjCorp3D.Api.Tests;
 public sealed class QuoteCalculatorTests
 {
     [Fact]
-    public void Calculates_filament_electricity_maintenance_materials_profit_tax_and_rounding()
+    public void Calculates_direct_cost_times_three_and_rounds_up()
     {
         var printer = Printer(powerWatts: 500m);
         var consumable = Consumable("Filamento", 200m, 1.24m);
@@ -23,12 +23,12 @@ public sealed class QuoteCalculatorTests
         Assert.Equal(300m, result.TotalWeight);
         Assert.Equal(60m, result.MaterialCost);
         Assert.Equal(3.6m, result.ElectricityCost);
-        Assert.Equal(6m, result.MaintenanceCost);
+        Assert.Equal(2m, result.MaintenanceCost);
         Assert.Equal(11m, result.AdditionalCost);
-        Assert.Equal(80.6m, result.Subtotal);
-        Assert.Equal(40.3m, result.ProfitAmount);
-        Assert.Equal(12.09m, result.TaxAmount);
-        Assert.Equal(133m, result.RecommendedPrice);
+        Assert.Equal(76.6m, result.Subtotal);
+        Assert.Equal(153.4m, result.ProfitAmount);
+        Assert.Equal(0m, result.TaxAmount);
+        Assert.Equal(230m, result.RecommendedPrice);
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public sealed class QuoteCalculatorTests
 
         Assert.Equal(240m, result.TotalWeight);
         Assert.Equal(60m, result.MaterialCost);
-        Assert.Equal(75m, result.RecommendedPrice);
+        Assert.Equal(183m, result.RecommendedPrice);
     }
 
     [Fact]
@@ -61,9 +61,9 @@ public sealed class QuoteCalculatorTests
 
         Assert.Equal(139.50m, result.MaterialCost);
         Assert.Equal(10.27m, result.ElectricityCost);
-        Assert.Equal(149.77m, result.Subtotal);
-        Assert.Equal(74.88m, result.ProfitAmount);
-        Assert.Equal(224.65m, result.RecommendedPrice);
+        Assert.Equal(150.77m, result.Subtotal);
+        Assert.Equal(302.23m, result.ProfitAmount);
+        Assert.Equal(453m, result.RecommendedPrice);
     }
 
     [Fact]

@@ -14,8 +14,6 @@ public static class QuoteCalculator
 
     public sealed record MaterialLine(ExtraMaterial Item, decimal Quantity) { public decimal Cost => Quantity * Item.UnitPrice; }
 
-    private static decimal Percent(decimal amount, decimal percent) => amount * Math.Max(0, percent) / 100m;
-
     public static QuoteCalculationDto Calculate(QuoteRequest request, Printer printer, IReadOnlyList<ConsumableLine> consumables, IReadOnlyList<MaterialLine> materials, BusinessSettingsDto settings)
     {
         if (string.IsNullOrWhiteSpace(request.Customer) || string.IsNullOrWhiteSpace(request.ProjectName)) throw new ArgumentException("Cliente y proyecto son obligatorios.");
@@ -38,21 +36,23 @@ public static class QuoteCalculator
         decimal energyKwh = printer.PowerWatts / 1000m * (printMinutes / 60m);
         decimal electricity = energyKwh * settings.ElectricityPerKwh * pieces;
         decimal directMaterials = materials.Sum(x => x.Cost) + request.AdditionalManualCost;
-        decimal directBase = material + electricity + directMaterials;
-        decimal maintenance = settings.MaintenancePerPrint * pieces + Percent(directBase, request.MaintenancePercent ?? settings.MaintenancePercent);
-        decimal preparation = Percent(directBase, request.PreparationPercent ?? settings.PreparationPercent);
-        decimal labor = Percent(directBase, request.LaborPercent ?? settings.LaborPercent);
-        decimal waste = Percent(directBase, request.WastePercent ?? settings.WastePercent);
-        decimal overhead = Percent(directBase, request.OverheadPercent ?? settings.OverheadPercent);
+        // Production is priced from its direct replacement cost. Administrative
+        // expenses, salaries and failures are covered by the x3 multiplier.
+        decimal maintenance = Math.Clamp(settings.MaintenancePerPrint, 1m, 3m);
+        decimal preparation = 0m;
+        decimal labor = 0m;
+        decimal waste = 0m;
+        decimal overhead = 0m;
         decimal packaging = Math.Max(0, request.PackagingCost ?? settings.PackagingCost) * pieces;
         decimal transport = Math.Max(0, request.TransportCost ?? settings.TransportCost);
-        decimal additional = directMaterials + preparation + labor + waste + overhead + packaging + transport;
+        decimal additional = directMaterials + packaging + transport;
 
-        decimal subtotal = material + electricity + maintenance + additional;
-        decimal multipliedTotal = subtotal * request.ProfitMultiplier;
-        decimal profit = multipliedTotal - subtotal;
-        decimal tax = multipliedTotal * settings.TaxPercent / 100m;
-        decimal recommended = settings.RoundTo <= 0 ? multipliedTotal + tax : decimal.Round((multipliedTotal + tax) / settings.RoundTo, 0, MidpointRounding.AwayFromZero) * settings.RoundTo;
+        decimal productionCost = material + electricity + directMaterials + maintenance;
+        decimal subtotal = productionCost + packaging + transport;
+        decimal multipliedTotal = productionCost * 3m;
+        decimal recommended = decimal.Ceiling(multipliedTotal + packaging + transport);
+        decimal profit = recommended - subtotal;
+        decimal tax = 0m;
         decimal Round(decimal value) => decimal.Round(value, settings.DecimalPlaces, MidpointRounding.AwayFromZero);
         return new(Round(weight), Round(material), Round(electricity), Round(maintenance), Round(preparation), Round(labor), Round(waste), Round(overhead), Round(packaging), Round(transport), Round(additional), Round(subtotal), Round(profit), Round(tax), Round(recommended));
     }

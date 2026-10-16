@@ -149,8 +149,6 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
             return CreatedAtAction("Get", "Quotes", new { id = quote.Id }, new { quote.Id, quote.OrderCode, quote.CreatedAtUtc, quote.Customer, quote.ProjectName, quote.ProductName, quote.PrinterName, quote.TotalWeight, CostTotal = quote.Subtotal, quote.RecommendedPrice, SoldAtUtc = (DateTime?)null });
         });
     }
-    private static decimal Percent(decimal amount, decimal percent) => amount * Math.Max(0, percent) / 100m;
-
     private async Task<(StoreQuoteCalculationDto Calculation, List<(ProductCatalog Product, int Quantity, string MaterialType, string MaterialLabel, decimal PricePerKg, Consumable? Consumable)> Products, List<Printer> Printers)> CalculateStore(StoreQuoteRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Customer)) throw new ArgumentException("El cliente es obligatorio.");
@@ -210,27 +208,18 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         }
         var material = products.Sum(x => MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity);
         var electricity = averagePower / 1000m * printHours * config.ElectricityPerKwh;
-        var directBase = material + electricity;
-        var maintenance = products.Sum(x => config.MaintenancePerPrint * x.Quantity + Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.MaintenancePercent));
-        var preparation = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.PreparationPercent));
-        var labor = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.LaborPercent));
-        var waste = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.WastePercent));
-        var overhead = products.Sum(x => Percent((MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity) + (averagePower / 1000m * (x.Product.ProductionMinutes * x.Quantity / 60m) * config.ElectricityPerKwh), x.Product.OverheadPercent));
+        var maintenance = Math.Clamp(config.MaintenancePerPrint, 1m, 3m) * printers.Count;
+        var preparation = 0m;
+        var labor = 0m;
+        var waste = 0m;
+        var overhead = 0m;
         var packaging = Math.Max(0, request.PackagingCost ?? 0);
         var transport = Math.Max(0, request.TransportCost ?? config.TransportCost);
-        var subtotal = material + electricity + maintenance + preparation + labor + waste + overhead + packaging + transport;
-        var multiplied = products.Sum(x =>
-        {
-            var lineHours = x.Product.ProductionMinutes * x.Quantity / 60m;
-            var lineMaterial = MaterialUnitCost(x.Product, x.MaterialType, x.PricePerKg) * x.Quantity;
-            var lineElectricity = averagePower / 1000m * lineHours * config.ElectricityPerKwh;
-            var lineBase = lineMaterial + lineElectricity;
-            var lineCosts = lineBase + config.MaintenancePerPrint * x.Quantity + Percent(lineBase, x.Product.MaintenancePercent) + Percent(lineBase, x.Product.PreparationPercent) + Percent(lineBase, x.Product.LaborPercent) + Percent(lineBase, x.Product.WastePercent) + Percent(lineBase, x.Product.OverheadPercent);
-            return lineCosts * x.Product.ProfitMultiplier;
-        }) + packaging + transport;
-        var profit = multiplied - subtotal;
-        var tax = multiplied * config.TaxPercent / 100m;
-        var recommended = config.RoundTo <= 0 ? multiplied + tax : decimal.Round((multiplied + tax) / config.RoundTo, 0, MidpointRounding.AwayFromZero) * config.RoundTo;
+        var productionCost = material + electricity + maintenance;
+        var subtotal = productionCost + packaging + transport;
+        var recommended = decimal.Ceiling(productionCost * 3m + packaging + transport);
+        var profit = recommended - subtotal;
+        var tax = 0m;
         decimal Round(decimal value) => decimal.Round(value, config.DecimalPlaces, MidpointRounding.AwayFromZero);
         return (new StoreQuoteCalculationDto(quantity, Round(printHours), Round(material), Round(electricity), Round(maintenance), Round(preparation), Round(labor), Round(waste), Round(overhead), Round(packaging), Round(transport), Round(subtotal), Round(profit), Round(tax), Round(recommended)), products, printers.OrderBy(x => Array.IndexOf(printerIds, x.Id)).ToList());
     }
@@ -244,7 +233,6 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         if (request.FilamentGrams < 0) return BadRequest(new { message = "Los gramos de filamento no pueden ser negativos." });
         if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de produccin no puede ser negativo." });
         if (request.MaintenancePercent < 0 || request.PreparationPercent < 0 || request.LaborPercent < 0 || request.WastePercent < 0 || request.OverheadPercent < 0) return BadRequest(new { message = "Los porcentajes no pueden ser negativos." });
-        if (request.ProfitMultiplier < 1.25m) return BadRequest(new { message = "La ganancia final debe ser al menos 25%." });
         return null;
     }
 

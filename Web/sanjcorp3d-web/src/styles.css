@@ -808,7 +808,7 @@ button.icon { min-height: 36px; }
     background: #f8fbfa;
     color: #111 !important;
   }
-  .printable .receipt-internal { display: block !important; }
+  .printable .receipt-internal { display: none !important; }
   .printable .detail-line {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
