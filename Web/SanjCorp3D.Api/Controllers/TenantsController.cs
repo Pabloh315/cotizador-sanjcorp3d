@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +37,9 @@ public sealed class TenantsController(
         if (await db.Tenants.IgnoreQueryFilters().AnyAsync(x => x.Slug == slug, ct))
             return Conflict(new { message = "Ya existe una cuenta con ese identificador." });
 
+        if (await users.FindByNameAsync(request.Username.Trim()) is not null)
+            return Conflict(new { message = "Ese nombre de usuario ya estÃ¡ en uso. Elige uno diferente." });
+
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<IActionResult>(async () =>
         {
@@ -49,19 +52,6 @@ public sealed class TenantsController(
             db.Tenants.Add(tenant);
             await db.SaveChangesAsync(ct);
 
-            // New Maker spaces receive every global printer as a local working
-            // copy. Their favorite flags remain independent from other spaces.
-            var catalog = await db.Printers.IgnoreQueryFilters().AsNoTracking()
-                .GroupBy(x => x.CatalogId).Select(x => x.OrderBy(item => item.Id).First()).ToListAsync(ct);
-            tenantContext.Use(tenant.Id);
-            db.Printers.AddRange(catalog.Select(x => new Printer
-            {
-                CatalogId = x.CatalogId, Name = x.Name, BuildX = x.BuildX, BuildY = x.BuildY,
-                BuildZ = x.BuildZ, Nozzle = x.Nozzle, Speed = x.Speed, PowerWatts = x.PowerWatts,
-                HourlyCost = x.HourlyCost, ColorCount = x.ColorCount, Status = x.Status, IsDefault = false, Active = x.Active
-            }));
-            await db.SaveChangesAsync(ct);
-
             var user = new ApplicationUser
             {
                 UserName = request.Username.Trim(), DisplayName = request.DisplayName.Trim(),
@@ -70,7 +60,7 @@ public sealed class TenantsController(
             };
             var created = await users.CreateAsync(user, request.Password);
             if (!created.Succeeded) return IdentityError(created);
-            var roleResult = await users.AddToRoleAsync(user, AppRoles.Maker);
+            var roleResult = await users.AddToRoleAsync(user, AppRoles.Administrator);
             if (!roleResult.Succeeded) return IdentityError(roleResult);
             await transaction.CommitAsync(ct);
             return Created($"/api/tenants/{tenant.Id}", ToDto(tenant, 1));
@@ -128,36 +118,13 @@ public sealed class TenantsController(
         });
     }
 
-    [HttpPost("{id:guid}/users")]
-    public async Task<IActionResult> CreateUser(Guid id, CreateMakerUserRequest request, CancellationToken ct)
-    {
-        var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id && x.Kind == "maker", ct);
-        if (tenant is null) return NotFound();
-        if (!tenant.Active) return BadRequest(new { message = "La cuenta Maker está desactivada." });
-        var currentUsers = await users.Users.CountAsync(x => x.TenantId == tenant.Id, ct);
-        if (currentUsers >= 3)
-            return BadRequest(new { message = "Cada cuenta Maker puede tener un máximo de tres usuarios." });
-        ValidateUser(request.Username, request.DisplayName);
-        var user = new ApplicationUser
-        {
-            UserName = request.Username.Trim(), DisplayName = request.DisplayName.Trim(),
-            Email = NullIfWhiteSpace(request.Email), EmailConfirmed = !string.IsNullOrWhiteSpace(request.Email),
-            TenantId = tenant.Id, Active = true, IsMakerOwner = false
-        };
-        var created = await users.CreateAsync(user, request.Password);
-        if (!created.Succeeded) return IdentityError(created);
-        var roleResult = await users.AddToRoleAsync(user, AppRoles.Maker);
-        if (!roleResult.Succeeded) return IdentityError(roleResult);
-        return Created($"/api/tenants/{tenant.Id}/users/{user.Id}", new { user.Id, user.UserName, user.DisplayName, user.Email, user.TenantId, Role = AppRoles.Maker });
-    }
-
     private static TenantDto ToDto(Tenant tenant, int users) => new(tenant.Id, tenant.Name, tenant.Slug, tenant.Kind, tenant.LogoUrl, tenant.Active, tenant.CreatedAtUtc, users);
 
     private static void ValidateTenant(string name, string slug, string? logo)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120) throw new ArgumentException("El nombre de la cuenta es obligatorio y admite hasta 120 caracteres.");
         if (string.IsNullOrWhiteSpace(slug) || slug.Trim().Length > 80) throw new ArgumentException("El identificador de la cuenta es obligatorio y admite hasta 80 caracteres.");
-        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, números y guiones.");
+        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, nÃƒÂºmeros y guiones.");
         if (!string.IsNullOrWhiteSpace(logo) && logo.Length > 2_000_000) throw new ArgumentException("El logo es demasiado grande.");
     }
 
@@ -171,5 +138,3 @@ public sealed class TenantsController(
     private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private ObjectResult IdentityError(IdentityResult result) => BadRequest(new { message = string.Join(" ", result.Errors.Select(x => x.Description)) });
 }
-
-

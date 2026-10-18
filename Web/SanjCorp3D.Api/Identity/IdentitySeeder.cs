@@ -67,7 +67,7 @@ public static class IdentitySeeder
             if (!isDevelopment && string.IsNullOrWhiteSpace(password))
             {
                 if (template.IsSupreme)
-                    throw new InvalidOperationException($"Falta {SeedPasswordPrefix}__{template.Username}__Password para crear el administrador inicial en producción.");
+                    throw new InvalidOperationException($"Falta {SeedPasswordPrefix}__{template.Username}__Password para crear el administrador inicial en producciÃ³n.");
                 continue;
             }
             yield return new SeedUser(template.Username, template.DisplayName, password, template.Role, template.IsSupreme);
@@ -106,7 +106,7 @@ public static class IdentitySeeder
                 IsSupremeAdmin = seed.IsSupreme
             };
             if (string.IsNullOrWhiteSpace(seed.Password))
-                throw new InvalidOperationException($"Falta una contraseña inicial para {seed.Username}.");
+                throw new InvalidOperationException($"Falta una contraseÃ±a inicial para {seed.Username}.");
             var created = await users.CreateAsync(user, seed.Password);
             if (!created.Succeeded)
                 throw new InvalidOperationException(string.Join("; ", created.Errors.Select(error => error.Description)));
@@ -147,4 +147,13 @@ public static class IdentitySeeder
 
     private sealed record SeedUserTemplate(string Username, string DisplayName, string Role, bool IsSupreme, string DevelopmentPassword);
     private sealed record SeedUser(string Username, string DisplayName, string? Password, string Role, bool IsSupreme = false);
+    private static async Task PromoteTenantOwnersToAdministrators(UserManager<ApplicationUser> users)
+    {
+        foreach (var owner in await users.Users.Where(x => x.IsMakerOwner && x.Active).ToListAsync())
+        {
+            if (!await users.IsInRoleAsync(owner, AppRoles.Administrator))
+                await users.AddToRoleAsync(owner, AppRoles.Administrator);
+        }
+    }
+
 }

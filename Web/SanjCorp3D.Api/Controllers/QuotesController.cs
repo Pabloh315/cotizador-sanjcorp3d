@@ -45,13 +45,13 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         return q is null?NotFound():Ok(q);
     }
 
-    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"),HttpPost("calculate")]
+    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"),HttpPost("calculate")]
     public async Task<IActionResult>Calculate(QuoteRequest request,CancellationToken ct)
     {
         var resolved=await Resolve(request,ct);return Ok(QuoteCalculator.Calculate(request,resolved.Printer,resolved.Consumables,resolved.Materials,await settings.GetAsync(ct)));
     }
 
-    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"),HttpPost]
+    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"),HttpPost]
     public async Task<IActionResult>Create(QuoteRequest request,CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotizacion." });
@@ -70,7 +70,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         });
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPatch("{id:long}/price")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"), HttpPatch("{id:long}/price")]
     public async Task<IActionResult> UpdatePrice(long id, [FromBody] PriceUpdateRequest request, CancellationToken ct)
     {
         if (request.Price <= 0) return BadRequest(new { message = "El precio final debe ser mayor que cero." });
@@ -83,7 +83,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         return Ok(new { quote.Id, quote.RecommendedPrice, quote.ProfitAmount });
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("{id:long}/copy")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"), HttpPost("{id:long}/copy")]
     public async Task<IActionResult> Copy(long id, CancellationToken ct)
     {
         var source = await db.Quotes.AsNoTracking().Include(x => x.Consumables).Include(x => x.Materials).FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -98,7 +98,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
 
     public sealed record PriceUpdateRequest(decimal Price);
 
-    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"),HttpPost("{id:long}/sale")]
+    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"),HttpPost("{id:long}/sale")]
     public async Task<IActionResult>ConfirmSale(long id,CancellationToken ct)
     {
         var strategy=db.Database.CreateExecutionStrategy();
@@ -185,7 +185,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         });
     }
 
-    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Maker},{AppRoles.SuperAdmin}"),HttpDelete("{id:long}")]
+    [Authorize(Roles=$"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Maker}"),HttpDelete("{id:long}")]
     public async Task<IActionResult>Delete(long id,CancellationToken ct)
     {
         var strategy=db.Database.CreateExecutionStrategy();
@@ -225,7 +225,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         if(to.HasValue)q=q.Where(x=>x.CreatedAtUtc<DateTime.SpecifyKind(to.Value.Date.AddDays(1),DateTimeKind.Utc));
         var rows=await q.OrderByDescending(x=>x.CreatedAtUtc).ToListAsync(ct);
         var config = await settings.GetAsync(ct);
-        var html = ExcelHistoryReport(rows, "Atlas Impresiones 3D", config.CurrencySymbol, search, from, to);
+        var html = ExcelHistoryReport(rows, config.BusinessName, config.CurrencySymbol, search, from, to);
         return File(Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(html)).ToArray(),"application/vnd.ms-excel",$"historial-cotizaciones-{DateTime.UtcNow:yyyyMMdd}.xls");
     }
 
@@ -297,8 +297,8 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             .Include(x => x.Materials)
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (quote is null) return NotFound();
-        var business = "Atlas Impresiones 3D";
         var config = await settings.GetAsync(ct);
+        var business = config.BusinessName;
         return File(PdfVoucher(quote, business, config.CurrencySymbol), "application/pdf", $"cotizacion-{quote.OrderCode}.pdf");
     }
     private async Task<(Printer Printer,List<QuoteCalculator.ConsumableLine> Consumables,List<QuoteCalculator.MaterialLine> Materials)>Resolve(QuoteRequest request,CancellationToken ct)
@@ -412,7 +412,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
 
         Stroke(.72m, .88m, .84m); Line(42, 70, 553, 70);
         Text("F1", 8, 42, 52, "Este documento corresponde a una cotizacion y no reemplaza una factura fiscal.", .34m, .43m, .41m);
-        Text("F2", 9, 377, 52, "Gracias por confiar en Atlas Impresiones 3D", .02m, .41m, .37m);
+        Text("F2", 9, 377, 52, "Gracias por confiar en " + businessName, .02m, .41m, .37m);
 
         var stream = content.ToString();
         var pageResources = logo is null

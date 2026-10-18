@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -26,12 +26,8 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
         if (user is null || !user.Active) return Unauthorized(new { message = "Credenciales incorrectas." });
         var roles = await users.GetRolesAsync(user);
         var isSuperAdmin = user.IsSupremeAdmin || roles.Contains(AppRoles.SuperAdmin);
-        var tenant = await ResolveTenant(user, isSuperAdmin);
-        if (tenant is null || !tenant.Active) return Unauthorized(new { message = "La cuenta pertenece a un espacio inactivo." });
-        var workspace = request.Workspace.Trim().ToLowerInvariant();
-        if (workspace is not ("technology" or "makers")) return BadRequest(new { message = "El espacio seleccionado no es válido." });
-        if (!isSuperAdmin && workspace == "makers" && !roles.Contains(AppRoles.Maker)) return Unauthorized(new { message = "Esta cuenta no pertenece a Makers." });
-        if (!isSuperAdmin && workspace == "technology" && roles.Contains(AppRoles.Maker)) return Unauthorized(new { message = "Esta cuenta pertenece a Makers." });
+        var tenant = isSuperAdmin ? null : await ResolveTenant(user, false);
+        if (!isSuperAdmin && (tenant is null || !tenant.Active)) return Unauthorized(new { message = "La cuenta pertenece a una empresa inactiva." });
         var result = await signIn.PasswordSignInAsync(user, request.Password, request.RememberMe, lockoutOnFailure: true);
         if (result.RequiresTwoFactor)
         {
@@ -83,7 +79,7 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
         if (user is null || !user.Active) return Unauthorized();
         var code = request.Code.Replace(" ", "").Replace("-", "");
         if (!await users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, code))
-            return BadRequest(new { message = "El código de autenticación no es válido." });
+            return BadRequest(new { message = "El cÃ³digo de autenticaciÃ³n no es vÃ¡lido." });
         await users.SetTwoFactorEnabledAsync(user, true);
         var recoveryCodes = await users.GenerateNewTwoFactorRecoveryCodesAsync(user, 8);
         return Ok(new { enabled = true, recoveryCodes });
@@ -103,7 +99,7 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
     {
         var roles = await users.GetRolesAsync(user);
         var isSuperAdmin = user.IsSupremeAdmin || roles.Contains(AppRoles.SuperAdmin);
-        var tenant = await ResolveTenant(user, isSuperAdmin);
+        var tenant = isSuperAdmin ? null : await ResolveTenant(user, false);
         var workspaces = isSuperAdmin
             ? await db.Tenants.IgnoreQueryFilters().Where(x => x.Active).OrderBy(x => x.Kind).ThenBy(x => x.Name)
                 .Select(x => new { id = (Guid?)x.Id, name = x.Name, slug = x.Slug, kind = x.Kind, logoUrl = x.LogoUrl, active = x.Active }).ToListAsync()
@@ -125,5 +121,3 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
         return await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == (user.TenantId ?? TenantContext.TechnologyTenantId));
     }
 }
-
-

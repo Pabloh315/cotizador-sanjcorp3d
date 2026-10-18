@@ -76,17 +76,17 @@ function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (
   }
 
   return <main className="login-shell">
-    <section className="brand-panel"><button type="button" className="back-link public-back" onClick={onBack}>Volver a la página principal</button>
+    <section className="brand-panel"><button type="button" className="back-link public-back" onClick={onBack}>Volver a la pÃƒÂ¡gina principal</button>
       <div className="brand-logo"><img src={logo} alt={brandName} /></div>
       <p className="eyebrow">ATLAS IMPRESIONES 3D</p>
-      <h1>Control preciso para cada impresión.</h1>
-      <p className="lead">Cotizaciones, inventario, pedidos y ventas en un espacio privado diseñado para tu equipo.</p>
+      <h1>Control preciso para cada impresiÃƒÂ³n.</h1>
+      <p className="lead">Cotizaciones, inventario, pedidos y ventas en un espacio privado diseÃƒÂ±ado para tu equipo.</p>
       <div className="security-note"><ShieldCheck size={20} /><span>Acceso protegido, permisos por rol y datos organizados.</span></div>
     </section>
     <section className="login-panel"><button type="button" className="theme-toggle floating-theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button><form className="login-card" onSubmit={submit}>
       <div className="lock"><LockKeyhole size={24} /></div>
       <p className="eyebrow">ACCESO AL SISTEMA</p>
-      <h2>{workspace ? 'Iniciar sesión' : 'Elige tu espacio'}</h2>
+      <h2>{workspace ? 'Iniciar sesiÃƒÂ³n' : 'Elige tu espacio'}</h2>
       {!workspace ? <>
         <p className="muted">Selecciona donde quieres trabajar.</p>
         <div className="workspace-choice"><button type="button" onClick={() => setWorkspace('technology')}>{brandName}</button><button type="button" onClick={() => setWorkspace('makers')}>Makers</button><button type="button" className="supreme-login" onClick={() => setWorkspace('technology')}>Administrador supremo</button></div>
@@ -94,7 +94,7 @@ function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (
         <button type="button" className="back-link" onClick={() => { setWorkspace(null); setError(''); setRequiresCode(false) }}>Volver</button>
         <label>Usuario<input type="text" autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required autoFocus /></label>
         <label>Contrasena<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required /></label>
-        {requiresCode && <label>Código 2FA o de recuperación<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} required autoFocus /></label>}
+        {requiresCode && <label>CÃƒÂ³digo 2FA o de recuperaciÃƒÂ³n<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} required autoFocus /></label>}
         {error && <p className="error" role="alert">{error}</p>}
         <button disabled={busy}>{busy ? 'Verificando...' : 'Entrar de forma segura'}</button>
       </>}
@@ -112,8 +112,8 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   const [supremeMode, setSupremeMode] = useState<'technology' | 'makers'>(() => (sessionStorage.getItem('sanjcorp.mode') as 'technology' | 'makers') || 'technology')
   const isAdmin = isSuperAdmin || profile.roles.includes('Administrator')
   const canCatalog = isSuperAdmin || profile.roles.includes('Administrator') || (profile.roles.includes('Maker') && profile.isMakerOwner === true)
-  const canSale = isSuperAdmin || hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Maker'])
-  const canOrders = isSuperAdmin || hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Production', 'Maker'])
+  const canSale = hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Inventory', 'Maker'])
+  const canOrders = hasAnyRole(profile.roles, ['Administrator', 'Sales', 'Inventory', 'Production', 'Maker'])
   const goTo = (next: string) => { localStorage.setItem(routeKey, next); window.location.hash = next; setRoute(next); setMobileOpen(false) }
   type NavItem = { key: PageKey; label: string; icon: typeof Gauge; admin?: boolean }
   const navItem = (key: PageKey, label: string, icon: typeof Gauge, admin = false): NavItem => ({ key, label, icon, admin })
@@ -145,7 +145,7 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   const receiptLogo = isSuperAdmin ? (profile.workspaces?.find(x => x.kind === 'technology')?.logoUrl ?? profile.logoUrl ?? logo) : (activeWorkspace?.logoUrl ?? profile.logoUrl ?? logo)
   let content
   switch (page) {
-    case 'supreme': content = isSuperAdmin ? <SupremeAdminPage profile={profile} mode={supremeMode} /> : <DashboardPage goTo={goTo} />; break
+    case 'supreme': content = isSuperAdmin ? <SupremeAdminPage /> : <DashboardPage goTo={goTo} />; break
     case 'chat': content = <ChatPage profile={profile} />; break
     case 'quote': content = <QuotePage canWrite={canSale} />; break
     case 'storeQuote': content = <StoreQuotePage canWrite={canSale} />; break
@@ -154,7 +154,7 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
     case 'printers': content = <PrintersPage canManage={isAdmin} canFavorite={!isSuperAdmin} />; break
     case 'consumables': content = <ConsumablesPage canEdit={canCatalog} />; break
     case 'materials': content = <MaterialsPage canEdit={canCatalog} />; break
-    case 'history': content = <HistoryPage initialId={initialHistoryId} canSale={canSale} isAdmin={isAdmin} logoUrl={receiptLogo} businessName={brandName} />; break
+    case 'history': content = <HistoryPage initialId={initialHistoryId} canSale={canSale} isAdmin={isAdmin} logoUrl={receiptLogo} businessName={profile.tenantName || brandName} />; break
     case 'reports': content = <ReportsPage />; break
     case 'users': content = isAdmin ? <UsersPage /> : <DashboardPage goTo={goTo} />; break
     case 'settings': content = <SettingsPage profile={profile} isAdmin={isAdmin} onProfileChange={onProfileChange} />; break
@@ -163,8 +163,8 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   }
   return <div className="app-shell">
     {mobileOpen && <button className="sidebar-scrim" aria-label="Cerrar menu" onClick={() => setMobileOpen(false)} />}
-    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-logo small-mark"><img src={logo} alt={brandName} /></div><div><strong>{isSuperAdmin ? 'ADMINISTRACION' : 'ATLAS'}</strong><span>{isSuperAdmin ? 'PANEL SUPREMO' : 'IMPRESIONES 3D'}</span></div><button className="icon mobile-close" onClick={() => setMobileOpen(false)}><X size={20} /></button></div><nav>{visibleNavigationGroups.map(group => <section className="nav-section" key={group.label}><p>{group.label}</p>{group.items.map(({ key, label, icon: Icon }) => <button key={key} className={page === key ? 'active' : ''} onClick={() => goTo(key)}><Icon size={18} /><span>{label}</span></button>)}</section>)}</nav><div className="sidebar-footer"><div className="signed-user"><div className="avatar"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div><div><strong>{profile.displayName}</strong><span>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Cerrar sesión</button></div></aside>
-    <div className="workspace"><header className="topbar"><button className="icon menu-button" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div><span className="connection-dot" />{isSuperAdmin ? 'Panel de administración' : brandName}</div>{isSuperAdmin && <select className="workspace-switcher" value={supremeMode} onChange={e => { const mode = e.target.value as 'technology' | 'makers'; setSupremeMode(mode); sessionStorage.setItem('sanjcorp.mode', mode); goTo('supreme') }}><option value="technology">{brandName}</option><option value="makers">Makers</option></select>}<button type="button" className="theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>{!isSuperAdmin && <InventoryAlerts onOpen={() => goTo('consumables')} />}<details className="profile-menu"><summary className="profile-chip"><span>{profile.displayName}</span><div className="avatar mini"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div></summary><div className="profile-popover"><small>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</small>{!isSuperAdmin && <button onClick={() => goTo('settings')}>Configuración</button>}<button onClick={onLogout}>Cerrar sesión</button></div></details></header><main className="page-content">{content}</main><footer className="site-copyright">Atlas Impresiones 3D - Todos los derechos reservados.</footer></div>
+    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-logo small-mark"><img src={logo} alt={brandName} /></div><div><strong>{isSuperAdmin ? 'ADMINISTRACION' : 'ATLAS'}</strong><span>{isSuperAdmin ? 'PANEL SUPREMO' : 'IMPRESIONES 3D'}</span></div><button className="icon mobile-close" onClick={() => setMobileOpen(false)}><X size={20} /></button></div><nav>{visibleNavigationGroups.map(group => <section className="nav-section" key={group.label}><p>{group.label}</p>{group.items.map(({ key, label, icon: Icon }) => <button key={key} className={page === key ? 'active' : ''} onClick={() => goTo(key)}><Icon size={18} /><span>{label}</span></button>)}</section>)}</nav><div className="sidebar-footer"><div className="signed-user"><div className="avatar"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div><div><strong>{profile.displayName}</strong><span>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Cerrar sesiÃƒÂ³n</button></div></aside>
+    <div className="workspace"><header className="topbar"><button className="icon menu-button" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div><span className="connection-dot" />{isSuperAdmin ? 'Panel de administraciÃƒÂ³n' : brandName}</div>{isSuperAdmin && <select className="workspace-switcher" value={supremeMode} onChange={e => { const mode = e.target.value as 'technology' | 'makers'; setSupremeMode(mode); sessionStorage.setItem('sanjcorp.mode', mode); goTo('supreme') }}><option value="technology">{brandName}</option><option value="makers">Makers</option></select>}<button type="button" className="theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>{!isSuperAdmin && <InventoryAlerts onOpen={() => goTo('consumables')} />}<details className="profile-menu"><summary className="profile-chip"><span>{profile.displayName}</span><div className="avatar mini"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div></summary><div className="profile-popover"><small>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</small>{!isSuperAdmin && <button onClick={() => goTo('settings')}>ConfiguraciÃƒÂ³n</button>}<button onClick={onLogout}>Cerrar sesiÃƒÂ³n</button></div></details></header><main className="page-content">{content}</main><footer className="site-copyright">{profile.tenantName || brandName} - Todos los derechos reservados.</footer></div>
   </div>
 }
 
@@ -187,9 +187,3 @@ function InventoryAlerts({ onOpen }: { onOpen: () => void }) {
     {open && <div className="alerts-popover" role="dialog" aria-label="Alarmas de inventario"><div className="alerts-popover-header"><div><p className="eyebrow">INVENTARIO</p><h3>Alarmas</h3></div><button className="icon ghost" aria-label="Cerrar alarmas" onClick={() => setOpen(false)}><X size={16} /></button></div>{alerts.length === 0 ? <p className="alerts-empty">No hay filamentos bajo el umbral.</p> : <div className="alerts-list">{alerts.map(alert => <button key={alert.id} className={`inventory-alert ${alert.severity}`} onClick={() => { setOpen(false); onOpen() }}><AlertTriangle size={17} /><span><strong>{alert.severity === 'out' ? 'Agotado' : 'Stock bajo'}</strong><small>{alert.message}</small></span></button>)}</div>}</div>}
   </div>
 }
-
-
-
-
-
-

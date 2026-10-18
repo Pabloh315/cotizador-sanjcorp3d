@@ -13,7 +13,7 @@ export function firstDayOfMonth() {
 }
 
 export function formatDate(value?: string) {
-  return value ? new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—'
+  return value ? new Intl.DateTimeFormat('es-BO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'â€”'
 }
 
 export function money(value: number, symbol = 'Bs') {
@@ -34,7 +34,7 @@ export function weight(value: number) {
 }
 
 export function roleLabel(role: string) {
-  return ({ Administrator: 'Administrador', SuperAdmin: 'Administrador supremo', Maker: 'Maker', Sales: 'Ventas', Production: 'Producción', Viewer: 'Consulta' } as Record<string, string>)[role] ?? role
+  return ({ Administrator: 'Administrador', SuperAdmin: 'Administrador supremo', Maker: 'Maker', Sales: 'Ventas', Production: 'ProducciÃ³n', Viewer: 'Consulta' } as Record<string, string>)[role] ?? role
 }
 
 export function hasAnyRole(roles: string[], allowed: string[]) {
@@ -48,7 +48,7 @@ export function PageHeader({ eyebrow, title, description, actions }: { eyebrow: 
   </div>
 }
 
-export function Loading({ label = 'Cargando…' }: { label?: string }) {
+export function Loading({ label = 'Cargandoâ€¦' }: { label?: string }) {
   return <div className="loading-block"><LoaderCircle className="spin" size={22} /><span>{label}</span></div>
 }
 
@@ -71,6 +71,3 @@ export function Status({ active, trueLabel = 'ACTIVO', falseLabel = 'ARCHIVADO' 
 export function Metric({ label, value, icon }: { label: string; value: ReactNode; icon: ReactNode }) {
   return <article className="metric-card"><div className="metric-icon">{icon}</div><p>{label}</p><strong>{value}</strong></article>
 }
-
-
-

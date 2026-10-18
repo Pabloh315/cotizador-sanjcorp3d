@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SanjCorp3D.Api.Contracts;
@@ -34,7 +34,7 @@ public sealed class PrintOrdersController(AppDbContext db) : ControllerBase
         return Ok(orders);
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("{id:long}/start")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPost("{id:long}/start")]
     public async Task<IActionResult> Start(long id, CancellationToken ct)
     {
         var order = await db.PrintOrders.Include(x => x.Printer).Include(x => x.Quote).FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -56,7 +56,7 @@ public sealed class PrintOrdersController(AppDbContext db) : ControllerBase
         return Ok(ToDto(order));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("{id:long}/finish")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPost("{id:long}/finish")]
     public async Task<IActionResult> Finish(long id, CancellationToken ct)
     {
         var order = await db.PrintOrders.Include(x => x.Printer).Include(x => x.Quote).FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -71,7 +71,7 @@ public sealed class PrintOrdersController(AppDbContext db) : ControllerBase
         return Ok(ToDto(order));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("{id:long}/cooling-complete")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPost("{id:long}/cooling-complete")]
     public async Task<IActionResult> CoolingComplete(long id, CancellationToken ct)
     {
         var order = await db.PrintOrders.Include(x => x.Printer).Include(x => x.Quote).FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -91,4 +91,3 @@ public sealed class PrintOrdersController(AppDbContext db) : ControllerBase
         x.CreatedAtUtc, x.StartedAtUtc, x.EstimatedFinishedAtUtc, x.FinishedAtUtc, x.CoolingUntilUtc, x.CompletedAtUtc,
         x.Quote.PrintHours, x.Quote.Quantity, x.Quote.RecommendedPrice);
 }
-

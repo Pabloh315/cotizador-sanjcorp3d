@@ -19,6 +19,8 @@ public sealed class TenantContext
         UserTenantId = null;
         IsSuperAdmin = user.IsInRole(AppRoles.SuperAdmin);
         if (user.Identity?.IsAuthenticated != true) return true;
+        // Platform administrators manage company accounts only; they never receive a customer workspace context.
+        if (IsSuperAdmin) return true;
 
         var claim = user.FindFirstValue(ClaimType);
         if (string.IsNullOrWhiteSpace(claim) && !IsSuperAdmin) return false;

@@ -21,7 +21,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         return Ok(await query.OrderBy(x => x.Name).Select(x => ToDto(x)).ToListAsync(ct));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Maker}"), HttpPost]
     public async Task<IActionResult> Create(CreateProductRequest request, CancellationToken ct)
     {
         var validation = ValidateProduct(request, out var name);
@@ -32,7 +32,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya est registrado." }); }
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPatch("{id:long}")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Maker}"), HttpPatch("{id:long}")]
     public async Task<IActionResult> Update(long id, CreateProductRequest request, CancellationToken ct)
     {
         var item = await db.ProductCatalogs.FindAsync([id], ct);
@@ -58,7 +58,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         catch (DbUpdateException) { return Conflict(new { message = "Ese producto ya est registrado." }); }
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpDelete("{id:long}")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Maker}"), HttpDelete("{id:long}")]
     public async Task<IActionResult> Archive(long id, CancellationToken ct)
     {
         var item = await db.ProductCatalogs.FindAsync([id], ct);
@@ -68,14 +68,14 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         return NoContent();
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("store/calculate")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"), HttpPost("store/calculate")]
     public async Task<IActionResult> CalculateStoreQuote(StoreQuoteRequest request, CancellationToken ct)
     {
         var (calculation, _, _) = await CalculateStore(request, ct);
         return Ok(calculation);
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("store/quote")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Sales},{AppRoles.Inventory},{AppRoles.Maker}"), HttpPost("store/quote")]
     public async Task<IActionResult> CreateStoreQuote(StoreQuoteRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.CustomerPhone)) return BadRequest(new { message = "El celular del cliente es obligatorio para guardar la cotizacion." });

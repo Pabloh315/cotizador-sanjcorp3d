@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +26,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
             .ToListAsync(ct));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPost]
     public async Task<IActionResult> Create(Consumable input, CancellationToken ct)
     {
         if (!await CanManageAsync()) return Forbid();
@@ -45,7 +45,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
         return result;
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPut("{id:long}")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPut("{id:long}")]
     public async Task<IActionResult> Update(long id, Consumable input, CancellationToken ct)
     {
         if (!await CanManageAsync()) return Forbid();
@@ -69,7 +69,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
         return await Save(item, ct);
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPatch("{id:long}/stock")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPatch("{id:long}/stock")]
     public async Task<IActionResult> Stock(long id, [FromBody] StockRequest request, CancellationToken ct)
     {
         if (!await CanManageAsync()) return Forbid();
@@ -90,7 +90,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
         return Ok(ToResponse(item));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("{id:long}/stock/add")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPost("{id:long}/stock/add")]
     public async Task<IActionResult> AddStock(long id, [FromBody] StockAdditionRequest request, CancellationToken ct)
     {
         if (!await CanManageAsync()) return Forbid();
@@ -132,7 +132,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
         return Ok(ToResponse(item));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpPost("{id:long}/loss")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpPost("{id:long}/loss")]
     public async Task<IActionResult> RegisterLoss(long id, [FromBody] InventoryLossRequest request, CancellationToken ct)
     {
         if (!await CanManageAsync()) return Forbid();
@@ -157,7 +157,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
         return Ok(ToResponse(item));
     }
 
-    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Production},{AppRoles.Maker},{AppRoles.SuperAdmin}"), HttpDelete("{id:long}")]
+    [Authorize(Roles = $"{AppRoles.Administrator},{AppRoles.Inventory},{AppRoles.Production},{AppRoles.Maker}"), HttpDelete("{id:long}")]
     public async Task<IActionResult> Archive(long id, CancellationToken ct)
     {
         if (!await CanManageAsync()) return Forbid();
@@ -174,7 +174,7 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
 
     private async Task<bool> CanManageAsync()
     {
-        if (User.IsInRole(AppRoles.SuperAdmin) || User.IsInRole(AppRoles.Administrator)) return true;
+        if (User.IsInRole(AppRoles.Administrator) || User.IsInRole(AppRoles.Inventory) || User.IsInRole(AppRoles.Production)) return true;
         var current = await users.GetUserAsync(User);
         return current?.IsMakerOwner == true && User.IsInRole(AppRoles.Maker);
     }
@@ -240,4 +240,3 @@ public sealed class ConsumablesController(AppDbContext db, UserManager<Applicati
             throw new ArgumentException("Precio, densidad, existencia o umbral no son válidos.");
     }
 }
-
