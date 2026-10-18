@@ -64,7 +64,7 @@ export type QuoteDetail = {
   id: number; orderCode: string; createdAtUtc: string; customer: string; customerPhone?: string; projectName: string; productName?: string; printerName: string
   printHours: number; quantity: number; additionalManualCost: number; profitMultiplier: number; notes: string
   totalWeight: number; materialCost: number; electricityCost: number; machineCost: number; maintenanceCost: number
-  laborCost: number; additionalCost: number; functionalSurcharge: number; subtotal: number; profitAmount: number
+  laborCost: number; additionalCost: number; transportCost: number; functionalSurcharge: number; subtotal: number; profitAmount: number
   taxAmount: number; recommendedPrice: number
   consumables: Array<{ id: number; legacyConsumableId: number; name: string; category: string; material: string; color: string; grams: number; pricePerUnit: number; density: number; lineCost: number }>
   materials: Array<{ id: number; legacyMaterialId: number; name: string; quantity: number; unitPrice: number; lineCost: number }>

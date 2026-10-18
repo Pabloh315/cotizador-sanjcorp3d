@@ -36,7 +36,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         {
             x.Id,x.OrderCode,x.CreatedAtUtc,x.Customer,x.CustomerPhone,x.ProjectName,x.ProductName,x.PrinterName,x.PrintHours,x.Quantity,
             x.AdditionalManualCost,x.ProfitMultiplier,x.Notes,x.TotalWeight,x.MaterialCost,x.ElectricityCost,
-            x.MachineCost,x.MaintenanceCost,x.LaborCost,x.AdditionalCost,x.FunctionalSurcharge,x.Subtotal,
+            x.MachineCost,x.MaintenanceCost,x.LaborCost,x.AdditionalCost,x.TransportCost,x.FunctionalSurcharge,x.Subtotal,
             x.ProfitAmount,x.TaxAmount,x.RecommendedPrice,
             Consumables=x.Consumables.OrderBy(v=>v.Id).Select(v=>new{v.Id,v.LegacyConsumableId,v.Name,v.Category,v.Material,v.Color,v.Grams,v.PricePerUnit,v.Density,v.LineCost}).ToList(),
             Materials=x.Materials.OrderBy(v=>v.Id).Select(v=>new{v.Id,v.LegacyMaterialId,v.Name,v.Quantity,v.UnitPrice,v.LineCost}).ToList(),
@@ -62,7 +62,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             db.ChangeTracker.Clear();
             await using var transaction=await db.Database.BeginTransactionAsync(IsolationLevel.Serializable,ct);
             long next=(await db.Quotes.MaxAsync(x=>(long?)x.Id,ct)??0)+1;var created=DateTime.UtcNow;
-            var quote=new Quote{OrderCode=$"{Initial(request.Customer)}{Initial(resolved.Printer.Name)}{created:yyyyMMdd}{next:0000}",CreatedAtUtc=created,Customer=request.Customer.Trim(),CustomerPhone=request.CustomerPhone.Trim(),ProjectName=request.ProjectName.Trim(),ProductName=request.ProductName?.Trim()??string.Empty,PrinterId=resolved.Printer.Id,PrinterName=resolved.Printer.Name,PrintHours=request.PrintHours,Quantity=request.Quantity,AdditionalManualCost=request.AdditionalManualCost,ProfitMultiplier=request.ProfitMultiplier,Notes=request.Notes?.Trim()??string.Empty,TotalWeight=calculation.TotalWeight,MaterialCost=calculation.MaterialCost,ElectricityCost=calculation.ElectricityCost,MachineCost=0,MaintenanceCost=calculation.MaintenanceCost,LaborCost=calculation.LaborCost,AdditionalCost=calculation.AdditionalCost,FunctionalSurcharge=calculation.WasteCost+calculation.OverheadCost,Subtotal=calculation.Subtotal,ProfitAmount=calculation.ProfitAmount,TaxAmount=calculation.TaxAmount,RecommendedPrice=calculation.RecommendedPrice};
+            var quote=new Quote{OrderCode=$"{Initial(request.Customer)}{Initial(resolved.Printer.Name)}{created:yyyyMMdd}{next:0000}",CreatedAtUtc=created,Customer=request.Customer.Trim(),CustomerPhone=request.CustomerPhone.Trim(),ProjectName=request.ProjectName.Trim(),ProductName=request.ProductName?.Trim()??string.Empty,PrinterId=resolved.Printer.Id,PrinterName=resolved.Printer.Name,PrintHours=request.PrintHours,Quantity=request.Quantity,AdditionalManualCost=request.AdditionalManualCost,ProfitMultiplier=request.ProfitMultiplier,Notes=request.Notes?.Trim()??string.Empty,TotalWeight=calculation.TotalWeight,MaterialCost=calculation.MaterialCost,ElectricityCost=calculation.ElectricityCost,MachineCost=0,MaintenanceCost=calculation.MaintenanceCost,LaborCost=calculation.LaborCost,AdditionalCost=calculation.AdditionalCost,TransportCost=calculation.TransportCost,FunctionalSurcharge=calculation.WasteCost+calculation.OverheadCost,Subtotal=calculation.Subtotal,ProfitAmount=calculation.ProfitAmount,TaxAmount=calculation.TaxAmount,RecommendedPrice=calculation.RecommendedPrice};
             foreach(var line in resolved.Consumables)quote.Consumables.Add(new QuoteConsumable{LegacyConsumableId=line.Item.Id,Name=line.Item.Name,Category=line.Item.Category,Material=line.Item.Material,Color=line.Item.Color,Grams=line.Grams,PricePerUnit=line.Item.PricePerUnit,Density=line.Item.Density,LineCost=decimal.Round(line.UnitCost*request.Quantity,4,MidpointRounding.AwayFromZero)});
             foreach(var line in resolved.Materials)quote.Materials.Add(new QuoteMaterial{LegacyMaterialId=line.Item.Id,Name=line.Item.Name,Quantity=line.Quantity,UnitPrice=line.Item.UnitPrice,LineCost=decimal.Round(line.Cost,4,MidpointRounding.AwayFromZero)});
             db.Quotes.Add(quote);await db.SaveChangesAsync(ct);await transaction.CommitAsync(ct);
@@ -89,7 +89,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         var source = await db.Quotes.AsNoTracking().Include(x => x.Consumables).Include(x => x.Materials).FirstOrDefaultAsync(x => x.Id == id, ct);
         if (source is null) return NotFound();
         var now = DateTime.UtcNow;
-        var copy = new Quote { OrderCode = $"COPIA{now:yyyyMMddHHmmss}", CreatedAtUtc = now, Customer = source.Customer, CustomerPhone = source.CustomerPhone, ProjectName = source.ProjectName, ProductName = source.ProductName, PrinterId = source.PrinterId, PrinterName = source.PrinterName, PrintHours = source.PrintHours, Quantity = source.Quantity, AdditionalManualCost = source.AdditionalManualCost, ProfitMultiplier = source.ProfitMultiplier, Notes = source.Notes, TotalWeight = source.TotalWeight, MaterialCost = source.MaterialCost, ElectricityCost = source.ElectricityCost, MachineCost = source.MachineCost, MaintenanceCost = source.MaintenanceCost, LaborCost = source.LaborCost, AdditionalCost = source.AdditionalCost, FunctionalSurcharge = source.FunctionalSurcharge, Subtotal = source.Subtotal, ProfitAmount = source.ProfitAmount, TaxAmount = source.TaxAmount, RecommendedPrice = source.RecommendedPrice };
+        var copy = new Quote { OrderCode = $"COPIA{now:yyyyMMddHHmmss}", CreatedAtUtc = now, Customer = source.Customer, CustomerPhone = source.CustomerPhone, ProjectName = source.ProjectName, ProductName = source.ProductName, PrinterId = source.PrinterId, PrinterName = source.PrinterName, PrintHours = source.PrintHours, Quantity = source.Quantity, AdditionalManualCost = source.AdditionalManualCost, ProfitMultiplier = source.ProfitMultiplier, Notes = source.Notes, TotalWeight = source.TotalWeight, MaterialCost = source.MaterialCost, ElectricityCost = source.ElectricityCost, MachineCost = source.MachineCost, MaintenanceCost = source.MaintenanceCost, LaborCost = source.LaborCost, AdditionalCost = source.AdditionalCost, TransportCost = source.TransportCost, FunctionalSurcharge = source.FunctionalSurcharge, Subtotal = source.Subtotal, ProfitAmount = source.ProfitAmount, TaxAmount = source.TaxAmount, RecommendedPrice = source.RecommendedPrice };
         foreach (var line in source.Consumables) copy.Consumables.Add(new QuoteConsumable { LegacyConsumableId = line.LegacyConsumableId, Name = line.Name, Category = line.Category, Material = line.Material, Color = line.Color, Grams = line.Grams, PricePerUnit = line.PricePerUnit, Density = line.Density, LineCost = line.LineCost });
         foreach (var line in source.Materials) copy.Materials.Add(new QuoteMaterial { LegacyMaterialId = line.LegacyMaterialId, Name = line.Name, Quantity = line.Quantity, UnitPrice = line.UnitPrice, LineCost = line.LineCost });
         db.Quotes.Add(copy); await db.SaveChangesAsync(ct);
@@ -379,7 +379,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         Text("F1", 8.5m, 421, 759, $"Fecha: {quote.CreatedAtUtc:yyyy-MM-dd HH:mm}", .22m, .37m, .35m);
 
         InfoCard(42, 574, 248, "DATOS DEL CLIENTE", ("Cliente", quote.Customer), ("Celular", string.IsNullOrWhiteSpace(quote.CustomerPhone) ? "Sin registrar" : quote.CustomerPhone), ("Estado", quote.Sale is null ? "Cotizacion" : "Venta confirmada"));
-        InfoCard(305, 574, 248, "DETALLE DEL TRABAJO", ("Proyecto", quote.ProjectName), ("Producto", string.IsNullOrWhiteSpace(quote.ProductName) ? "Pieza personalizada" : quote.ProductName), ("Impresora", quote.PrinterName));
+        InfoCard(305, 574, 248, "DETALLE DEL TRABAJO", ("Proyecto", quote.ProjectName), ("Producto", string.IsNullOrWhiteSpace(quote.ProductName) ? "Pieza personalizada" : quote.ProductName), ("Peso total", $"{quote.TotalWeight:0.##} g"));
 
         Fill(.98m, 1, .995m); Rect(42, 512, 511, 42);
         Stroke(.72m, .88m, .84m); Rect(42, 512, 511, 42, true);
@@ -399,7 +399,8 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             Text(bold ? "F2" : "F1", 10.5m, 405, y, Money(amount, currencySymbol));
             y -= 30;
         }
-        Row("Servicio de impresion 3D", quote.RecommendedPrice, true);
+        Row("Servicio de impresion 3D", quote.RecommendedPrice - quote.TransportCost, true);
+        if (quote.TransportCost > 0) Row("Transporte", quote.TransportCost);
 
         Fill(.90m, .985m, .97m); Rect(42, 218, 511, 62);
         Stroke(.13m, .78m, .72m); Rect(42, 218, 511, 62, true);
@@ -407,8 +408,6 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         Text("F2", 26, 352, 242, Money(quote.RecommendedPrice, currencySymbol), .02m, .31m, .29m);
         Fill(.13m, .78m, .72m); Rect(42, 214, 511, 4);
 
-        Text("F2", 10.5m, 42, 178, "DETALLE", .02m, .41m, .37m);
-        Text("F1", 9m, 52, 156, "El precio incluye materiales, produccion y los servicios solicitados.", .25m, .36m, .34m);
 
         Stroke(.72m, .88m, .84m); Line(42, 70, 553, 70);
         Text("F1", 8, 42, 52, "Este documento corresponde a una cotizacion y no reemplaza una factura fiscal.", .34m, .43m, .41m);

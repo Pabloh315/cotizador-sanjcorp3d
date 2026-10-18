@@ -150,6 +150,7 @@ public sealed class Quote : ITenantEntity
     public decimal MaintenanceCost { get; set; }
     public decimal LaborCost { get; set; }
     public decimal AdditionalCost { get; set; }
+    public decimal TransportCost { get; set; }
     public decimal FunctionalSurcharge { get; set; }
     public decimal Subtotal { get; set; }
     public decimal ProfitAmount { get; set; }

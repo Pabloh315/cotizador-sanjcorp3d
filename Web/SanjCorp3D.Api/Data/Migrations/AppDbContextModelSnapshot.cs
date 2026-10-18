@@ -655,6 +655,10 @@ namespace SanjCorp3D.Api.Data.Migrations
                     b.Property<bool>("Active")
                         .HasColumnType("boolean");
 
+                    b.Property<decimal>("AdditionalMaterialCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -663,6 +667,14 @@ namespace SanjCorp3D.Api.Data.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("FilamentGrams")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("LaborPercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("MaintenancePercent")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
@@ -678,6 +690,18 @@ namespace SanjCorp3D.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<decimal>("OverheadPercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("PackagingCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("PreparationPercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<decimal>("ProductionMinutes")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
@@ -688,6 +712,10 @@ namespace SanjCorp3D.Api.Data.Migrations
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
+
+                    b.Property<decimal>("WastePercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.HasKey("Id");
 
@@ -802,6 +830,10 @@ namespace SanjCorp3D.Api.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<decimal>("TotalWeight")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("TransportCost")
                         .HasPrecision(18, 4)
                         .HasColumnType("numeric(18,4)");
 
