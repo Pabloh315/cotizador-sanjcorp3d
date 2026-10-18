@@ -107,17 +107,17 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [wizardStep, setWizardStep] = useState(0)
 
   useEffect(() => {
-    Promise.all([api.printers(), api.consumables(), api.materials(), api.settings(), api.products()])
-      .then(([printerItems, consumableItems, materialItems, configuration, productItems]) => {
+    Promise.all([api.printers(), api.consumables(), api.materials(), api.settings()])
+      .then(([printerItems, consumableItems, materialItems, configuration]) => {
         const availablePrinters = printerItems.filter(x => x.active)
-        setPrinters(availablePrinters); setConsumables(consumableItems); setMaterials(materialItems); setSettings(configuration); setProducts(productItems)
+        setPrinters(availablePrinters); setConsumables(consumableItems); setMaterials(materialItems); setSettings(configuration)
         setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: Math.max(configuration.defaultProfitMultiplier, marginToMultiplier(minProfitMargin)), maintenancePercent: configuration.maintenancePercent, preparationPercent: configuration.preparationPercent, laborPercent: configuration.laborPercent, wastePercent: configuration.wastePercent, overheadPercent: configuration.overheadPercent, packagingCost: configuration.packagingCost, transportCost: 0 }))
         setSelectedConsumable(consumableItems.find(x => x.isDefault)?.id ?? consumableItems[0]?.id ?? 0)
         setSelectedMaterial(materialItems[0]?.id ?? 0)
       })
       .catch(reason => setError((reason as Error).message)).finally(() => setLoading(false))
+    api.products().then(setProducts).catch(() => setProducts([]))
   }, [])
-
   const consumableById = useMemo(() => new Map(consumables.map(x => [x.id, x])), [consumables])
   const materialById = useMemo(() => new Map(materials.map(x => [x.id, x])), [materials])
   const selectedPrinter = useMemo(() => printers.find(x => x.id === form.printerId), [printers, form.printerId])

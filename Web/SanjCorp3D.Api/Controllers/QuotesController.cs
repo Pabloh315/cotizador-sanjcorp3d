@@ -379,7 +379,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         Text("F1", 8.5m, 421, 759, $"Fecha: {quote.CreatedAtUtc:yyyy-MM-dd HH:mm}", .22m, .37m, .35m);
 
         InfoCard(42, 574, 248, "DATOS DEL CLIENTE", ("Cliente", quote.Customer), ("Celular", string.IsNullOrWhiteSpace(quote.CustomerPhone) ? "Sin registrar" : quote.CustomerPhone), ("Estado", quote.Sale is null ? "Cotizacion" : "Venta confirmada"));
-        InfoCard(305, 574, 248, "DETALLE DEL TRABAJO", ("Proyecto", quote.ProjectName), ("Producto", string.IsNullOrWhiteSpace(quote.ProductName) ? "Pieza personalizada" : quote.ProductName), ("Peso total", $"{quote.TotalWeight:0.##} g"));
+        InfoCard(305, 574, 248, "DETALLE DEL TRABAJO", ("Proyecto", quote.ProjectName), ("Producto", string.IsNullOrWhiteSpace(quote.ProductName) ? "Pieza personalizada" : quote.ProductName));
 
         Fill(.98m, 1, .995m); Rect(42, 512, 511, 42);
         Stroke(.72m, .88m, .84m); Rect(42, 512, 511, 42, true);
