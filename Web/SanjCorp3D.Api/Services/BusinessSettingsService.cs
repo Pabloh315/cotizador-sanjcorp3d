@@ -8,7 +8,7 @@ namespace SanjCorp3D.Api.Services;
 
 public sealed class BusinessSettingsService(AppDbContext db)
 {
-    public static BusinessSettingsDto Defaults => new("Empresa 3D", "Bolivianos", "Bs", 1.10m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 3m, 0m, 1m, 2);
+    public static BusinessSettingsDto Defaults => new("Empresa 3D", "Bolivianos", "Bs", 1.10m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 3m, 0m, 1m, 2, string.Empty, string.Empty, string.Empty);
 
     public async Task<BusinessSettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -24,7 +24,9 @@ public sealed class BusinessSettingsService(AppDbContext db)
             Number(values, "overhead_percent", defaults.OverheadPercent), Number(values, "packaging_cost", defaults.PackagingCost),
             Number(values, "transport_cost", defaults.TransportCost), Number(values, "profit_multiplier", defaults.DefaultProfitMultiplier),
             Number(values, "tax_percent", defaults.TaxPercent), Number(values, "round_to", defaults.RoundTo),
-            Math.Clamp((int)Number(values, "decimal_places", defaults.DecimalPlaces), 0, 4));
+            Math.Clamp((int)Number(values, "decimal_places", defaults.DecimalPlaces), 0, 4),
+            Text(values, "business_address", defaults.Address), Text(values, "business_phone", defaults.Phone),
+            Text(values, "business_email", defaults.Email));
     }
 
     public async Task SaveAsync(BusinessSettingsDto settings, CancellationToken cancellationToken = default)
@@ -34,6 +36,7 @@ public sealed class BusinessSettingsService(AppDbContext db)
         if (settings.MaintenancePercent < 0 || settings.PreparationPercent < 0 || settings.LaborPercent < 0 || settings.WastePercent < 0 || settings.OverheadPercent < 0) throw new ArgumentException("Los porcentajes no pueden ser negativos.");
         if (settings.DefaultProfitMultiplier < 1m) throw new ArgumentException("El multiplicador debe ser igual o mayor a 1.");
         if (settings.DecimalPlaces is < 0 or > 4) throw new ArgumentException("Los decimales deben estar entre 0 y 4.");
+        if (settings.Address.Length > 300 || settings.Phone.Length > 50 || settings.Email.Length > 160) throw new ArgumentException("Los datos de contacto son demasiado largos.");
         var values = new Dictionary<string, string>
         {
             ["business_name"] = settings.BusinessName.Trim(), ["currency_name"] = settings.CurrencyName.Trim(),
@@ -44,7 +47,9 @@ public sealed class BusinessSettingsService(AppDbContext db)
             ["packaging_cost"] = Invariant(settings.PackagingCost), ["transport_cost"] = Invariant(settings.TransportCost),
             ["profit_multiplier"] = Invariant(settings.DefaultProfitMultiplier),
             ["tax_percent"] = Invariant(settings.TaxPercent), ["round_to"] = Invariant(settings.RoundTo),
-            ["decimal_places"] = settings.DecimalPlaces.ToString(CultureInfo.InvariantCulture)
+            ["decimal_places"] = settings.DecimalPlaces.ToString(CultureInfo.InvariantCulture),
+            ["business_address"] = settings.Address.Trim(), ["business_phone"] = settings.Phone.Trim(),
+            ["business_email"] = settings.Email.Trim()
         };
         foreach (var item in values)
         {

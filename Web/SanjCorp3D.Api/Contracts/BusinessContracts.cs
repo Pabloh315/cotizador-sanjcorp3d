@@ -6,7 +6,8 @@ public sealed record BusinessSettingsDto(
     decimal MaintenancePercent, decimal PreparationPercent, decimal LaborPercent,
     decimal WastePercent, decimal OverheadPercent, decimal PackagingCost, decimal TransportCost,
     decimal DefaultProfitMultiplier, decimal TaxPercent,
-    decimal RoundTo, int DecimalPlaces);
+    decimal RoundTo, int DecimalPlaces,
+    string Address, string Phone, string Email);
 
 public sealed record ConsumableUsageRequest(long ConsumableId, decimal Grams);
 public sealed record MaterialUsageRequest(long MaterialId, decimal Quantity);

@@ -1,4 +1,4 @@
-# SANJ CORP 3D Web
+# Atlas Technologies Web
 
 Nueva plataforma web del cotizador, compuesta por:
 

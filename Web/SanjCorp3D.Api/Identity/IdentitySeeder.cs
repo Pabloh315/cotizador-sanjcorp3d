@@ -35,12 +35,18 @@ public static class IdentitySeeder
             technology = new Tenant
             {
                 Id = TenantContext.TechnologyTenantId,
-                Name = "SanjCorp Technology",
-                Slug = "sanjcorp-technology",
+                Name = "Atlas Technologies",
+                Slug = "atlas-technologies",
                 Kind = "technology",
                 Active = true
             };
             db.Tenants.Add(technology);
+            await db.SaveChangesAsync();
+        }
+        else if (!technology.Slug.Equals("atlas-technologies", StringComparison.OrdinalIgnoreCase))
+        {
+            technology.Name = "Atlas Technologies";
+            technology.Slug = "atlas-technologies";
             await db.SaveChangesAsync();
         }
         tenantContext.Use(technology.Id);
@@ -80,7 +86,7 @@ public static class IdentitySeeder
         if (oldUser is null || await users.FindByNameAsync("super_admin") is not null) return;
         oldUser.UserName = "super_admin";
         oldUser.NormalizedUserName = users.NormalizeName("super_admin");
-        oldUser.Email = "super_admin@local.sanjcorp3d";
+        oldUser.Email = "super_admin@local.atlas-technologies";
         oldUser.NormalizedEmail = users.NormalizeEmail(oldUser.Email);
         oldUser.DisplayName = "Super Admin";
         oldUser.EmailConfirmed = true;
@@ -98,7 +104,7 @@ public static class IdentitySeeder
             user = new ApplicationUser
             {
                 UserName = seed.Username,
-                Email = $"{seed.Username}@local.sanjcorp3d",
+                Email = $"{seed.Username}@local.atlas-technologies",
                 DisplayName = seed.DisplayName,
                 EmailConfirmed = true,
                 Active = true,
@@ -113,7 +119,7 @@ public static class IdentitySeeder
         }
         else
         {
-            user.Email = $"{seed.Username}@local.sanjcorp3d";
+            user.Email = $"{seed.Username}@local.atlas-technologies";
             user.EmailConfirmed = true;
             user.DisplayName = seed.DisplayName;
             user.Active = true;

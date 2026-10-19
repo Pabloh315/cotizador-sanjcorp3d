@@ -37,7 +37,7 @@ export type ExtraMaterialCategory = { id: number; name: string; active: boolean 
 
 export type BusinessSettings = {
   businessName: string; currencyName: string; currencySymbol: string; electricityPerKwh: number
-  maintenancePerPrint: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; transportCost: number; defaultProfitMultiplier: number; taxPercent: number; roundTo: number; decimalPlaces: number
+  maintenancePerPrint: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; transportCost: number; defaultProfitMultiplier: number; taxPercent: number; roundTo: number; decimalPlaces: number; address: string; phone: string; email: string
 }
 
 export type ConsumableUsage = { consumableId: number; grams: number }

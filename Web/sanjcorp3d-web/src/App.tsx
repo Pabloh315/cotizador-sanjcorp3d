@@ -22,7 +22,7 @@ import { PublicHome } from './pages/PublicHome'
 import { hasAnyRole, roleLabel } from './ui'
 
 type PageKey = 'dashboard' | 'quote' | 'storeQuote' | 'storeProducts' | 'orders' | 'printers' | 'consumables' | 'materials' | 'history' | 'reports' | 'users' | 'settings' | 'help' | 'chat' | 'supreme'
-const brandName = 'Atlas Solutions'
+const brandName = 'Atlas Technologies'
 const themeKey = 'atlas.theme'
 const routeKey = 'atlas.route'
 type ThemeMode = 'light' | 'dark'
@@ -75,7 +75,7 @@ function Login({ onSuccess, onBack, theme, onToggleTheme }: { onSuccess: (profil
   return <main className="login-shell">
     <section className="brand-panel"><button type="button" className="back-link public-back" onClick={onBack}>Volver a la página principal</button>
       <div className="brand-logo"><ShieldCheck size={28} /></div>
-      <p className="eyebrow">ATLAS SOLUTIONS</p>
+      <p className="eyebrow">ATLAS TECHNOLOGIES</p>
       <h1>Control preciso para cada impresión.</h1>
       <p className="lead">Cotizaciones, inventario, pedidos y ventas en un espacio privado diseñado para tu equipo.</p>
       <div className="security-note"><ShieldCheck size={20} /><span>Acceso protegido, permisos por rol y datos organizados.</span></div>

@@ -298,8 +298,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             .FirstOrDefaultAsync(x => x.Id == id, ct);
         if (quote is null) return NotFound();
         var config = await settings.GetAsync(ct);
-        var business = config.BusinessName;
-        return File(PdfVoucher(quote, business, config.CurrencySymbol), "application/pdf", $"cotizacion-{quote.OrderCode}.pdf");
+        return File(PdfVoucher(quote, config), "application/pdf", $"cotizacion-{quote.OrderCode}.pdf");
     }
     private async Task<(Printer Printer,List<QuoteCalculator.ConsumableLine> Consumables,List<QuoteCalculator.MaterialLine> Materials)>Resolve(QuoteRequest request,CancellationToken ct)
     {
@@ -311,7 +310,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
     private sealed record StockPriceSegment(decimal Grams, decimal Price);
     private static decimal CostFor(List<StockPriceSegment> lots, decimal grams){var left=grams;var cost=0m;foreach(var lot in lots){if(left<=0)break;var take=Math.Min(left,lot.Grams);cost+=take/1000m*lot.Price;left-=take;}return cost;}
     private static void RemoveFrom(List<StockPriceSegment> lots, decimal grams){var left=grams;for(var i=0;i<lots.Count&&left>0;){var take=Math.Min(left,lots[i].Grams);left-=take;if(take>=lots[i].Grams)lots.RemoveAt(i);else{lots[i]=lots[i] with { Grams=lots[i].Grams-take };i++;}}}
-    private static byte[] PdfVoucher(Quote quote, string businessName, string currencySymbol)
+    private static byte[] PdfVoucher(Quote quote, BusinessSettingsDto business)
     {
         static string Safe(string value)
         {
@@ -325,7 +324,10 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         static string TrimText(string value, int max) => string.IsNullOrWhiteSpace(value) ? "-" : value.Length <= max ? value : value[..Math.Max(0, max - 3)] + "...";
         static byte[] Ascii(string value) => Encoding.ASCII.GetBytes(value);
 
-        var logo = TryLoadLogoPngRgb();
+        PngLogo? logo = null;
+        var businessName = business.BusinessName;
+        var currencySymbol = business.CurrencySymbol;
+        var contact = string.Join(" | ", new[] { business.Phone, business.Email }.Where(value => !string.IsNullOrWhiteSpace(value)));
         var content = new StringBuilder();
         void Raw(string value) => content.Append(value).Append('\n');
         void Fill(decimal r, decimal g, decimal b) => Raw($"{N(r)} {N(g)} {N(b)} rg");
@@ -370,7 +372,8 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             Image(50, 752, 66, 56);
         }
         Text("F2", 26, 143, 790, businessName, .02m, .31m, .29m);
-        Text("F1", 11, 145, 770, "Comprobante profesional de cotizacion", .20m, .46m, .43m);
+        Text("F1", 10, 145, 770, string.IsNullOrWhiteSpace(business.Address) ? "Comprobante profesional de cotizacion" : TrimText(business.Address, 43), .20m, .46m, .43m);
+        if (!string.IsNullOrWhiteSpace(contact)) Text("F1", 8.5m, 145, 755, TrimText(contact, 49), .20m, .46m, .43m);
         Fill(1, 1, 1); Rect(407, 756, 130, 48);
         Stroke(.72m, .88m, .84m); Rect(407, 756, 130, 48, true);
         Text("F2", 10, 421, 786, quote.Sale is null ? "COTIZACION" : "VENTA CONFIRMADA", .02m, .41m, .37m);
