@@ -73,17 +73,17 @@ function Login({ onSuccess, onBack, theme, onToggleTheme }: { onSuccess: (profil
   }
 
   return <main className="login-shell">
-    <section className="brand-panel"><button type="button" className="back-link public-back" onClick={onBack}>Volver a la pÃƒÂ¡gina principal</button>
+    <section className="brand-panel"><button type="button" className="back-link public-back" onClick={onBack}>Volver a la página principal</button>
       <div className="brand-logo"><ShieldCheck size={28} /></div>
       <p className="eyebrow">ATLAS SOLUTIONS</p>
-      <h1>Control preciso para cada impresiÃƒÂ³n.</h1>
-      <p className="lead">Cotizaciones, inventario, pedidos y ventas en un espacio privado diseÃƒÂ±ado para tu equipo.</p>
+      <h1>Control preciso para cada impresión.</h1>
+      <p className="lead">Cotizaciones, inventario, pedidos y ventas en un espacio privado diseñado para tu equipo.</p>
       <div className="security-note"><ShieldCheck size={20} /><span>Acceso protegido, permisos por rol y datos organizados.</span></div>
     </section>
     <section className="login-panel"><button type="button" className="theme-toggle floating-theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button><form className="login-card" onSubmit={submit}>
       <div className="lock"><LockKeyhole size={24} /></div>
       <p className="eyebrow">ACCESO AL SISTEMA</p>
-      <h2>{workspace ? 'Iniciar sesiÃƒÂ³n' : 'Elige tu espacio'}</h2>
+      <h2>{workspace ? 'Iniciar sesión' : 'Elige tu espacio'}</h2>
       {!workspace ? <>
         <p className="muted">Selecciona donde quieres trabajar.</p>
         <div className="workspace-choice"><button type="button" onClick={() => setWorkspace('technology')}>{brandName}</button><button type="button" onClick={() => setWorkspace('makers')}>Makers</button><button type="button" className="supreme-login" onClick={() => setWorkspace('technology')}>Administrador supremo</button></div>
@@ -91,7 +91,7 @@ function Login({ onSuccess, onBack, theme, onToggleTheme }: { onSuccess: (profil
         <button type="button" className="back-link" onClick={() => { setWorkspace(null); setError(''); setRequiresCode(false) }}>Volver</button>
         <label>Usuario<input type="text" autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required autoFocus /></label>
         <label>Contrasena<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required /></label>
-        {requiresCode && <label>CÃƒÂ³digo 2FA o de recuperaciÃƒÂ³n<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} required autoFocus /></label>}
+        {requiresCode && <label>Código 2FA o de recuperación<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={event => setCode(event.target.value)} required autoFocus /></label>}
         {error && <p className="error" role="alert">{error}</p>}
         <button disabled={busy}>{busy ? 'Verificando...' : 'Entrar de forma segura'}</button>
       </>}
