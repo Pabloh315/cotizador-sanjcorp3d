@@ -5,7 +5,7 @@ import type { BusinessSettings, QuoteDetail, QuoteSummary } from '../types'
 import { Empty, ErrorMessage, Loading, PageHeader, Status, SuccessMessage, formatDate, money, number } from '../ui'
 import { confirmDialog } from '../confirm'
 
-export function HistoryPage({ initialId, canSale, isAdmin, logoUrl, businessName = 'Atlas Impresiones 3D' }: { initialId?: number; canSale: boolean; isAdmin: boolean; logoUrl?: string; businessName?: string }) {
+export function HistoryPage({ initialId, canSale, isAdmin, logoUrl, businessName = 'Empresa 3D' }: { initialId?: number; canSale: boolean; isAdmin: boolean; logoUrl?: string; businessName?: string }) {
   const [items, setItems] = useState<QuoteSummary[]>([])
   const [detail, setDetail] = useState<QuoteDetail>()
   const [settings, setSettings] = useState<BusinessSettings>()
@@ -39,7 +39,7 @@ export function HistoryPage({ initialId, canSale, isAdmin, logoUrl, businessName
 
 
         <section className="detail-section"><h3>Resumen</h3><div className="receipt-description"><span>{detail.productName || detail.projectName || 'Servicio de impresión 3D'} · {detail.quantity} pieza(s)</span><b>{money(detail.recommendedPrice - detail.transportCost, settings?.currencySymbol)}</b></div>{detail.transportCost > 0 && <div className="receipt-description"><span>Transporte</span><b>{money(detail.transportCost, settings?.currencySymbol)}</b></div>}<div className="detail-total"><span>Total</span><strong>{money(detail.recommendedPrice, settings?.currencySymbol)}</strong></div></section>
-        {detail.notes && <section className="detail-section"><h3>Observaciones</h3><p className="notes">{detail.notes}</p></section>}<p className="receipt-thanks">Gracias por confiar en Atlas Impresiones 3D<small>Documento no válido como factura</small></p>
+        {detail.notes && <section className="detail-section"><h3>Observaciones</h3><p className="notes">{detail.notes}</p></section>}<p className="receipt-thanks">Gracias por confiar en {businessName}<small>Documento no válido como factura</small></p>
         <div className="drawer-actions no-print"><button className="ghost" onClick={() => window.print()}><Printer size={16} />Imprimir</button>{canSale && !detail.sale && <button className="sale-button" onClick={sale}><ShoppingBag size={16} />Confirmar venta</button>}{isAdmin && <button className="ghost danger-text" onClick={remove}><Trash2 size={16} />Eliminar</button>}</div>
       </>}
     </aside></div>}

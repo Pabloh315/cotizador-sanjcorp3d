@@ -8,7 +8,7 @@ namespace SanjCorp3D.Api.Services;
 
 public sealed class BusinessSettingsService(AppDbContext db)
 {
-    public static BusinessSettingsDto Defaults => new("SANJ CORP 3D", "Bolivianos", "Bs", 1.10m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 3m, 0m, 1m, 2);
+    public static BusinessSettingsDto Defaults => new("Empresa 3D", "Bolivianos", "Bs", 1.10m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 3m, 0m, 1m, 2);
 
     public async Task<BusinessSettingsDto> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -22,7 +22,7 @@ public sealed class BusinessSettingsService(AppDbContext db)
             Number(values, "maintenance_percent", defaults.MaintenancePercent), Number(values, "preparation_percent", defaults.PreparationPercent),
             Number(values, "labor_percent", defaults.LaborPercent), Number(values, "waste_percent", defaults.WastePercent),
             Number(values, "overhead_percent", defaults.OverheadPercent), Number(values, "packaging_cost", defaults.PackagingCost),
-            Number(values, "transport_cost", defaults.TransportCost), Number(values, "profit_multiplier", 1m + legacyMargin / 100m),
+            Number(values, "transport_cost", defaults.TransportCost), Number(values, "profit_multiplier", defaults.DefaultProfitMultiplier),
             Number(values, "tax_percent", defaults.TaxPercent), Number(values, "round_to", defaults.RoundTo),
             Math.Clamp((int)Number(values, "decimal_places", defaults.DecimalPlaces), 0, 4));
     }
@@ -32,7 +32,7 @@ public sealed class BusinessSettingsService(AppDbContext db)
         if (string.IsNullOrWhiteSpace(settings.BusinessName) || string.IsNullOrWhiteSpace(settings.CurrencySymbol)) throw new ArgumentException("El negocio y el simbolo monetario son obligatorios.");
         if (settings.ElectricityPerKwh < 0 || settings.MaintenancePerPrint is < 1m or > 3m || settings.TaxPercent < 0 || settings.RoundTo < 0 || settings.PackagingCost < 0 || settings.TransportCost < 0) throw new ArgumentException("Los costos no pueden ser negativos.");
         if (settings.MaintenancePercent < 0 || settings.PreparationPercent < 0 || settings.LaborPercent < 0 || settings.WastePercent < 0 || settings.OverheadPercent < 0) throw new ArgumentException("Los porcentajes no pueden ser negativos.");
-        if (settings.DefaultProfitMultiplier < 1.25m) throw new ArgumentException("El margen de ganancia debe ser igual o mayor al 25%.");
+        if (settings.DefaultProfitMultiplier < 1m) throw new ArgumentException("El multiplicador debe ser igual o mayor a 1.");
         if (settings.DecimalPlaces is < 0 or > 4) throw new ArgumentException("Los decimales deben estar entre 0 y 4.");
         var values = new Dictionary<string, string>
         {

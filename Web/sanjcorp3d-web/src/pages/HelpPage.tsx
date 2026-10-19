@@ -11,7 +11,7 @@ const topics = [
 ]
 
 export function HelpPage() {
-  return <><PageHeader eyebrow="GUÍA RÁPIDA" title="Ayuda" description="Flujos principales del cotizador web de Atlas Impresiones 3D." /><div className="help-grid">{topics.map(({ icon: Icon, title, text }, index) => <article className="panel help-card" key={title}><div className="help-number">{String(index + 1).padStart(2, '0')}</div><Icon size={24} /><h2>{title}</h2><p>{text}</p></article>)}</div><section className="panel formula-help"><BookOpen size={24} /><div><h2>Fórmula utilizada</h2><p>El sistema conserva el cálculo del programa original: costo de consumibles + electricidad + mantenimiento + adicionales; después aplica el multiplicador de ganancia, el impuesto y el redondeo configurado.</p></div></section></>
+  return <><PageHeader eyebrow="GUÍA RÁPIDA" title="Ayuda" description="Flujos principales del cotizador para tu empresa." /><div className="help-grid">{topics.map(({ icon: Icon, title, text }, index) => <article className="panel help-card" key={title}><div className="help-number">{String(index + 1).padStart(2, '0')}</div><Icon size={24} /><h2>{title}</h2><p>{text}</p></article>)}</div><section className="panel formula-help"><BookOpen size={24} /><div><h2>Fórmula utilizada</h2><p>El sistema conserva el cálculo del programa original: costo de consumibles + electricidad + mantenimiento + adicionales; después aplica el multiplicador de precio, los adicionales y el redondeo configurado.</p></div></section></>
 }
 
 

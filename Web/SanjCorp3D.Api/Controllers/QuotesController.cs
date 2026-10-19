@@ -238,13 +238,13 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         var totalCost = rows.Sum(x => x.Subtotal);
         var totalPrice = rows.Sum(x => x.RecommendedPrice);
         var totalProfit = rows.Sum(x => x.ProfitAmount);
-        var logo = ExcelLogoDataUri();
+        string? logo = null;
         var period = from.HasValue || to.HasValue ? $"{from:yyyy-MM-dd} al {to:yyyy-MM-dd}" : "Todos los registros";
         var sb = new StringBuilder();
         sb.AppendLine("<html><head><meta charset='utf-8'><style>");
         sb.AppendLine("body{font-family:Calibri,Arial,sans-serif;color:#10201d;background:#fff} table{border-collapse:collapse;width:100%} td,th{border:1px solid #bfd9d4;padding:7px 9px;font-size:12px} .top td{border:0}.brand{background:#057369;color:white}.brand h1{margin:0;font-size:24px}.brand p{margin:3px 0 0 0;font-size:12px}.logo{width:82px;height:64px;text-align:center;vertical-align:middle;background:#057369}.title{font-size:18px;font-weight:700;color:#057369}.muted{color:#60736f}.metric{background:#eefaf7;font-weight:700}.metric b{font-size:15px}.head th{background:#057369;color:white;font-weight:700;text-align:left}.money{text-align:right;mso-number-format:'#,##0.00'}.num{text-align:right}.sold{background:#dff6ec;color:#155d42;font-weight:700}.pending{background:#f1f4f2;color:#4b5855;font-weight:700}.total td{background:#eaf8f5;font-weight:700}.note{font-size:11px;color:#60736f;border:0}.spacer td{border:0;height:12px}.code{mso-number-format:'@';font-weight:700}</style></head><body>");
         sb.AppendLine("<table class='top'>");
-        sb.AppendLine("<tr class='brand'><td class='logo'>" + (logo is null ? "<b>ATLAS<br/>3D</b>" : $"<img src='{logo}' width='70' height='54' />") + $"</td><td colspan='9'><h1>{H(businessName)}</h1><p>Historial de cotizaciones para registro contable y control tributario</p></td></tr>");
+        sb.AppendLine("<tr class='brand'><td class='logo'>" + (logo is null ? "<b>EMPRESA</b>" : $"<img src='{logo}' width='70' height='54' />") + $"</td><td colspan='9'><h1>{H(businessName)}</h1><p>Historial de cotizaciones para registro contable y control tributario</p></td></tr>");
         sb.AppendLine($"<tr><td colspan='10' class='title'>Informe de historial</td></tr>");
         sb.AppendLine($"<tr><td colspan='2'><b>Generado:</b></td><td colspan='3'>{DateTime.Now:yyyy-MM-dd HH:mm}</td><td colspan='2'><b>Periodo:</b></td><td colspan='3'>{H(period)}</td></tr>");
         sb.AppendLine($"<tr><td colspan='2'><b>Busqueda:</b></td><td colspan='8'>{H(string.IsNullOrWhiteSpace(search) ? "Sin filtro" : search)}</td></tr>");
@@ -272,7 +272,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         }
         sb.AppendLine($"<tr class='total'><td colspan='8'>TOTALES</td><td class='money'>{totalCost:0.00}</td><td class='money'>{totalPrice:0.00}</td><td class='money'>{totalProfit:0.00}</td></tr>");
         sb.AppendLine("</table>");
-        sb.AppendLine("<p class='note'>Documento generado por Atlas Impresiones 3D. Revise la informacion antes de presentarla como respaldo contable o tributario.</p>");
+        sb.AppendLine("<p class='note'>Documento generado por {H(businessName)}. Revise la informacion antes de presentarla como respaldo contable o tributario.</p>");
         sb.AppendLine("</body></html>");
         return sb.ToString();
     }
@@ -363,8 +363,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         if (logo is null)
         {
             Stroke(.13m, .78m, .72m); Rect(48, 750, 70, 60, true);
-            Text("F2", 16, 59, 785, "ATLAS", 1, 1, 1);
-            Text("F1", 7, 55, 773, "IMPRESIONES 3D", .86m, 1, .98m);
+            Text("F2", 12, 58, 781, "EMPRESA", 1, 1, 1);
         }
         else
         {
@@ -384,8 +383,6 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
         Fill(.98m, 1, .995m); Rect(42, 512, 511, 42);
         Stroke(.72m, .88m, .84m); Rect(42, 512, 511, 42, true);
         Text("F1", 8, 62, 537, "CANTIDAD", .36m, .48m, .46m); Text("F2", 11, 62, 522, $"{quote.Quantity} pieza(s)");
-        Text("F1", 8, 205, 537, "TIEMPO ESTIMADO", .36m, .48m, .46m); Text("F2", 11, 205, 522, $"{quote.PrintHours:0.##} h");
-        Text("F1", 8, 370, 537, "PESO TOTAL", .36m, .48m, .46m); Text("F2", 11, 370, 522, $"{quote.TotalWeight:0.##} g");
 
         Fill(.02m, .45m, .41m); Rect(42, 462, 511, 30);
         Text("F2", 10, 60, 473, "CONCEPTO", 1, 1, 1);

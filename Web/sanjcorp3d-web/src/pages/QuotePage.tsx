@@ -6,18 +6,7 @@ import { Empty, ErrorMessage, Loading, PageHeader, SuccessMessage, money, number
 import { confirmDialog } from '../confirm'
 
 type BaseForm = { customer: string; customerPhone: string; projectName: string; address: string; latitude: number; longitude: number; printerId: number; hours: number; minutes: number; quantity: number; additionalManualCost: number; workExtraPercent: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; transportCost: number; profitMultiplier: number; notes: string }
-const emptyForm: BaseForm = { customer: '', customerPhone: '', projectName: '', address: '', latitude: -17.7833, longitude: -63.1821, printerId: 0, hours: 0, minutes: 0, quantity: 1, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: 6, preparationPercent: 10, laborPercent: 20, wastePercent: 7, overheadPercent: 5, packagingCost: 0, transportCost: 0, profitMultiplier: 1.4, notes: '' }
-type ProfitCostLine = { id: string; name: string; percent: number; fixed?: boolean }
-const defaultProfitCosts: ProfitCostLine[] = [
-  { id: 'salary', name: 'Costos de salarios', percent: 0, fixed: true },
-  { id: 'debt', name: 'Costos de inversion o deudas', percent: 0, fixed: true },
-  { id: 'manual', name: 'Costo manual', percent: 0, fixed: true },
-  { id: 'work', name: 'Adicional del trabajo', percent: 0, fixed: true },
-]
-const clampPercent = (value: number) => Math.min(100, Math.max(0, Number.isFinite(value) ? Number(value.toFixed(2)) : 0))
-const minProfitMargin = 25
-const marginToMultiplier = (margin: number) => Number((1 + Math.max(minProfitMargin, Number.isFinite(margin) ? margin : minProfitMargin) / 100).toFixed(4))
-const multiplierToMargin = (multiplier: number) => Number(Math.max(minProfitMargin, ((Number.isFinite(multiplier) ? multiplier : 1.25) - 1) * 100).toFixed(2))
+const emptyForm: BaseForm = { customer: '', customerPhone: '', projectName: '', address: '', latitude: -17.7833, longitude: -63.1821, printerId: 0, hours: 0, minutes: 0, quantity: 1, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: 0, preparationPercent: 0, laborPercent: 0, wastePercent: 0, overheadPercent: 0, packagingCost: 0, transportCost: 0, profitMultiplier: 3, notes: '' }
 type AddressResult = { display_name: string; lat: string; lon: string }
 type RouteInfo = { kilometers: number; cost: number; durationMinutes: number }
 type OriginPoint = { latitude: number; longitude: number }
@@ -31,7 +20,7 @@ const quoteWizardSteps = [
   { title: 'Proyecto', description: 'Cliente, pieza, impresora, tiempo y entrega.' },
   { title: 'Consumibles', description: 'Filamentos o resinas que se usaran en la impresion.' },
   { title: 'Materiales', description: 'Materiales extra, acabados y observaciones.' },
-  { title: 'Precio', description: 'Costos operativos, transporte y margen final.' },
+  { title: 'Precio', description: 'Multiplicador, empaque y transporte.' },
 ] as const
 
 function latLngToPoint(lat: number, lng: number, zoom = mapZoom) {
@@ -94,9 +83,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState<QuoteSummary[]>([])
   const [searching, setSearching] = useState(false)
-  const [profitCosts, setProfitCosts] = useState<ProfitCostLine[]>(defaultProfitCosts)
   const [newProfitCostName, setNewProfitCostName] = useState('')
-  const [newProfitCostPercent, setNewProfitCostPercent] = useState(0)
   const [addressResults, setAddressResults] = useState<AddressResult[]>([])
   const [addressBusy, setAddressBusy] = useState(false)
   const [originPoint, setOriginPoint] = useState<OriginPoint>()
@@ -111,7 +98,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       .then(([printerItems, consumableItems, materialItems, configuration]) => {
         const availablePrinters = printerItems.filter(x => x.active)
         setPrinters(availablePrinters); setConsumables(consumableItems); setMaterials(materialItems); setSettings(configuration)
-        setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: Math.max(configuration.defaultProfitMultiplier, marginToMultiplier(minProfitMargin)), maintenancePercent: configuration.maintenancePercent, preparationPercent: configuration.preparationPercent, laborPercent: configuration.laborPercent, wastePercent: configuration.wastePercent, overheadPercent: configuration.overheadPercent, packagingCost: configuration.packagingCost, transportCost: 0 }))
+        setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: Math.max(1, configuration.defaultProfitMultiplier || 3), maintenancePercent: configuration.maintenancePercent, preparationPercent: configuration.preparationPercent, laborPercent: configuration.laborPercent, wastePercent: configuration.wastePercent, overheadPercent: configuration.overheadPercent, packagingCost: configuration.packagingCost, transportCost: 0 }))
         setSelectedConsumable(consumableItems.find(x => x.isDefault)?.id ?? consumableItems[0]?.id ?? 0)
         setSelectedMaterial(materialItems[0]?.id ?? 0)
       })
@@ -121,47 +108,12 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const consumableById = useMemo(() => new Map(consumables.map(x => [x.id, x])), [consumables])
   const materialById = useMemo(() => new Map(materials.map(x => [x.id, x])), [materials])
   const selectedPrinter = useMemo(() => printers.find(x => x.id === form.printerId), [printers, form.printerId])
-  const profitMarginPercent = multiplierToMargin(form.profitMultiplier)
-  const appliedConfigPercentTotal = clampPercent(form.maintenancePercent) + clampPercent(form.preparationPercent) + clampPercent(form.laborPercent) + clampPercent(form.wastePercent) + clampPercent(form.overheadPercent)
-  const profitPercentTotal = useMemo(() => profitCosts.reduce((sum, line) => sum + clampPercent(line.percent), 0), [profitCosts])
-  const pendingProfitPercent = clampPercent(newProfitCostPercent)
-  const liveProfitPercentTotal = appliedConfigPercentTotal + profitPercentTotal + pendingProfitPercent
-  const percentFill = Math.min(100, liveProfitPercentTotal)
-  const estimatedBaseCost = useMemo(() => {
-    if (!settings || !selectedPrinter) return 0
-    const pieces = Math.max(1, Number(form.quantity || 1))
-    const consumableCost = consumableLines.reduce((sum, line) => {
-      const item = consumableById.get(line.consumableId)
-      if (!item) return sum
-      const unitCost = item.category.toLowerCase() === 'resina' ? line.grams / item.density / 1000 * item.pricePerUnit : line.grams / 1000 * item.pricePerUnit
-      return sum + unitCost * pieces
-    }, 0)
-    const materialCost = materialLines.reduce((sum, line) => {
-      const item = materialById.get(line.materialId)
-      return sum + (item ? item.unitPrice * line.quantity : 0)
-    }, 0)
-    const printHours = form.hours + form.minutes / 60
-    const electricity = selectedPrinter.powerWatts / 1000 * printHours * settings.electricityPerKwh * pieces
-    const maintenance = settings.maintenancePerPrint * pieces
-    return Math.max(0, consumableCost + materialCost + electricity + maintenance)
-  }, [settings, selectedPrinter, form.quantity, form.hours, form.minutes, consumableLines, materialLines, consumableById, materialById])
-  const profitAdditionalCost = Number((estimatedBaseCost * profitPercentTotal / 100).toFixed(2))
   const mapData = useMemo(() => mapTiles(form.latitude || defaultMapCenter.lat, form.longitude || defaultMapCenter.lng, 640, 260), [form.latitude, form.longitude])
   const wizardProgress = ((wizardStep + 1) / quoteWizardSteps.length) * 100
 
   function invalidate() { setCalculation(undefined); setSaved(undefined); setSold(false); setSuccess('') }
   function update<K extends keyof BaseForm>(key: K, value: BaseForm[K]) { setForm(current => ({ ...current, [key]: value })); invalidate() }
   function updateLocation(latitude: number, longitude: number, address = form.address) { setForm(current => ({ ...current, latitude, longitude, address })); setRouteInfo(undefined); invalidate() }
-  function updateProfitMargin(percent: number) { update('profitMultiplier', marginToMultiplier(percent)) }
-  function updateProfitCost(id: string, percent: number) { setProfitCosts(current => current.map(line => line.id === id ? { ...line, percent: clampPercent(percent) } : line)); invalidate() }
-  function removeProfitCost(id: string) { setProfitCosts(current => current.filter(line => line.id !== id || line.fixed)); invalidate() }
-  function addProfitCost() {
-    const name = newProfitCostName.trim()
-    if (!name) { setError('Escribe el nombre del costo adicional.'); return }
-    setProfitCosts(current => [...current, { id: `extra-${Date.now()}`, name, percent: clampPercent(newProfitCostPercent) }])
-    setNewProfitCostName(''); setNewProfitCostPercent(0); setError(''); invalidate()
-  }
-
   function addConsumable() {
     const item = consumableById.get(selectedConsumable)
     if (!item || grams <= 0) { setError('Selecciona un consumible e indica gramos mayores que cero.'); return }
@@ -262,7 +214,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   function request(): QuoteRequest {
     const locationNotes = form.address.trim() ? `Direccion: ${form.address.trim()}\nUbicacion: ${form.latitude.toFixed(6)}, ${form.longitude.toFixed(6)}\nMapa: https://www.openstreetmap.org/?mlat=${form.latitude.toFixed(6)}&mlon=${form.longitude.toFixed(6)}#map=17/${form.latitude.toFixed(6)}/${form.longitude.toFixed(6)}` : ''
     const quoteNotes = [locationNotes, form.notes].filter(Boolean).join('\n\n')
-    return { customer: form.customer, customerPhone: form.customerPhone, projectName: form.projectName, productName: selectedProduct, printerId: form.printerId, printHours: form.hours + form.minutes / 60, quantity: form.quantity, additionalManualCost: profitAdditionalCost, profitMultiplier: Math.max(form.profitMultiplier, marginToMultiplier(minProfitMargin)), notes: quoteNotes, consumables: consumableLines, materials: materialLines, maintenancePercent: form.maintenancePercent, preparationPercent: form.preparationPercent, laborPercent: form.laborPercent, wastePercent: form.wastePercent, overheadPercent: form.overheadPercent, packagingCost: form.packagingCost, transportCost: form.transportCost }
+    return { customer: form.customer, customerPhone: form.customerPhone, projectName: form.projectName, productName: selectedProduct, printerId: form.printerId, printHours: form.hours + form.minutes / 60, quantity: form.quantity, additionalManualCost: 0, profitMultiplier: Math.max(1, form.profitMultiplier), notes: quoteNotes, consumables: consumableLines, materials: materialLines, maintenancePercent: form.maintenancePercent, preparationPercent: form.preparationPercent, laborPercent: form.laborPercent, wastePercent: form.wastePercent, overheadPercent: form.overheadPercent, packagingCost: form.packagingCost, transportCost: form.transportCost }
   }
   async function calculate() {
     setBusy(true); setError(''); setSuccess('')
@@ -305,12 +257,12 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       const source = await api.quote(id)
       const totalMinutes = Math.round(source.printHours * 60)
       const printer = printers.find(item => item.name === source.printerName)
-      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, address: '', latitude: defaultMapCenter.lat, longitude: defaultMapCenter.lng, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0, profitMultiplier: Math.max(source.profitMultiplier, marginToMultiplier(minProfitMargin)), notes: source.notes })
+      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, address: '', latitude: defaultMapCenter.lat, longitude: defaultMapCenter.lng, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0, profitMultiplier: Math.max(1, source.profitMultiplier), notes: source.notes })
       setSelectedProduct(source.productName ?? '')
       setConsumableLines(source.consumables.filter(line => consumableById.has(line.legacyConsumableId)).map(line => ({ consumableId: line.legacyConsumableId, grams: line.grams })))
       setMaterialLines(source.materials.filter(line => materialById.has(line.legacyMaterialId)).map(line => ({ materialId: line.legacyMaterialId, quantity: line.quantity })))
       setCalculation({ totalWeight: source.totalWeight, materialCost: source.materialCost, electricityCost: source.electricityCost, maintenanceCost: source.maintenanceCost, preparationCost: 0, laborCost: source.laborCost, wasteCost: 0, overheadCost: source.functionalSurcharge, packagingCost: 0, transportCost: 0, additionalCost: source.additionalCost, subtotal: source.subtotal, profitAmount: source.profitAmount, taxAmount: source.taxAmount, recommendedPrice: source.recommendedPrice })
-      setCustomPrice(source.recommendedPrice); setSaved(undefined); setSold(false); setSearchOpen(false); setProfitCosts(defaultProfitCosts)
+      setCustomPrice(source.recommendedPrice); setSaved(undefined); setSold(false); setSearchOpen(false)
       setWizardStep(0)
       setSuccess(`Datos de ${source.orderCode} cargados como una nueva cotizacion. Puedes modificarlos antes de guardar.`)
     } catch (reason) { setError((reason as Error).message) }
@@ -318,8 +270,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   }
 
   function clear() {
-    setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: Math.max(settings?.defaultProfitMultiplier ?? 1.4, marginToMultiplier(minProfitMargin)), maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0 })
-    setProfitCosts(defaultProfitCosts); setNewProfitCostName(''); setNewProfitCostPercent(0)
+    setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: Math.max(1, settings?.defaultProfitMultiplier ?? 3), maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0 })
     setConsumableLines([]); setMaterialLines([]); setCalculation(undefined); setSaved(undefined); setSold(false); setSelectedProduct(''); setCustomPrice(0); setError(''); setSuccess('')
     setWizardStep(0)
   }
@@ -408,29 +359,13 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
         </section>}
 
         {wizardStep === 3 && <section className="panel">
-          <div className="section-title"><div><span className="step">04</span><h2>Ganancias</h2></div></div>
-          <div className="form-grid two">
-            <label>Margen de ganancia final (%)<input type="number" min={minProfitMargin} step="0.01" value={profitMarginPercent} onChange={e => updateProfitMargin(Number(e.target.value))} /></label>
-            <label>Total de porcentajes aplicados<input type="number" value={liveProfitPercentTotal.toFixed(2)} disabled /></label>
+          <div className="section-title"><div><span className="step">04</span><h2>Precio final</h2></div></div>
+          <div className="form-grid two compact-fields">
+            <label>Multiplicador de precio<input type="number" min="1" step="0.01" value={form.profitMultiplier} onChange={e => update('profitMultiplier', Math.max(1, Number(e.target.value)))} /></label>
+            <label>Transporte opcional<input type="number" min="0" step="0.01" value={form.transportCost} onChange={e => update('transportCost', Number(e.target.value))} /></label>
+            <label>Empaque por pieza<input type="number" min="0" step="0.01" value={form.packagingCost} onChange={e => update('packagingCost', Number(e.target.value))} /></label>
           </div>
-          <div className="margin-shortcuts" aria-label="Margenes rapidos"><span>Margen rapido</span>{[25, 35, 50].map(value => <button key={value} type="button" className={Math.round(profitMarginPercent) === value ? 'active' : ''} onClick={() => updateProfitMargin(value)}>{value}%</button>)}</div>
-          <div className="form-grid two compact-fields"><label>Empaque por pieza<input type="number" min="0" step="0.01" value={form.packagingCost} onChange={e => update('packagingCost', Number(e.target.value))} /></label><label>Transporte opcional<input type="number" min="0" step="0.01" value={form.transportCost} onChange={e => update('transportCost', Number(e.target.value))} /></label></div>
-          <div className="profit-percent-live">
-            <div><span>Base configurada</span><strong>{appliedConfigPercentTotal.toFixed(2)}%</strong></div>
-            <div><span>Adicionales</span><strong>{profitPercentTotal.toFixed(2)}%</strong></div>
-            <div><span>Por agregar</span><strong>{pendingProfitPercent.toFixed(2)}%</strong></div>
-            <div><span>Total en vivo</span><strong>{liveProfitPercentTotal.toFixed(2)}%</strong></div>
-            <div className="profit-percent-meter" aria-hidden="true"><span style={{ width: `${percentFill}%` }} /></div>
-          </div>
-          <div className="profit-costs">
-            {profitCosts.map(line => <div className="profit-cost-row" key={line.id}><label>{line.name}<input type="number" min="0" max="100" step="0.01" value={line.percent} onChange={e => updateProfitCost(line.id, Number(e.target.value))} /></label><span>%</span>{!line.fixed && <button className="icon ghost danger-text" type="button" aria-label="Quitar" onClick={() => removeProfitCost(line.id)}><Trash2 size={16} /></button>}</div>)}
-          </div>
-          <div className="inline-form profit-cost-add">
-            <label>Otro costo<input value={newProfitCostName} onChange={e => setNewProfitCostName(e.target.value)} placeholder="Ej. Transporte, comisiones, alquiler" /></label>
-            <label>Porcentaje<input type="number" min="0" max="100" step="0.01" value={newProfitCostPercent} onChange={e => setNewProfitCostPercent(clampPercent(Number(e.target.value)))} /></label>
-            <button type="button" className="secondary" onClick={addProfitCost}><Plus size={17} />Agregar costo</button>
-          </div>
-          <div className="formula-note"><strong>Costos adicionales por porcentaje: {money(profitAdditionalCost, settings?.currencySymbol)}</strong><span>La ganancia real se aplica despues de cubrir produccion y costos operativos.</span></div>
+          <div className="formula-note"><strong>Multiplicador actual: x{form.profitMultiplier || 3}</strong><span>El costo de produccion se multiplica por este valor. El transporte y empaque se agregan al final.</span></div>
         </section>}
 
         <div className="wizard-actions">
@@ -444,18 +379,9 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
 
       <aside className="quote-summary panel">
         <p className="eyebrow">RESULTADO</p><h2>Precio recomendado</h2>
-        {!calculation ? <div className="summary-placeholder"><Calculator size={34} /><p>Completa los datos y calcula para ver el desglose.</p></div> : <>
-          <div className="price-hero"><small>Total sugerido</small><strong>{money(customPrice > 0 ? customPrice : calculation.recommendedPrice, settings?.currencySymbol)}</strong><span>{number(calculation.totalWeight)} g totales</span><label>Editar precio final<input type="number" min="0.01" step="0.01" value={customPrice || calculation.recommendedPrice} onChange={e => setCustomPrice(Math.max(0, Number(e.target.value)))} /></label></div>
-          <dl className="breakdown">
-            <div><dt>Consumibles</dt><dd>{money(calculation.materialCost, settings?.currencySymbol)}</dd></div>
-            <div><dt>Electricidad</dt><dd>{money(calculation.electricityCost, settings?.currencySymbol)}</dd></div>
-            <div><dt>Mantenimiento</dt><dd>{money(calculation.maintenanceCost, settings?.currencySymbol)}</dd></div>
-            <div><dt>Adicionales</dt><dd>{money(calculation.additionalCost, settings?.currencySymbol)}</dd></div>
-            <div><dt>Costos porcentuales</dt><dd>{money(profitAdditionalCost, settings?.currencySymbol)}</dd></div>
-            <div className="subtotal"><dt>Costo total</dt><dd>{money(calculation.subtotal, settings?.currencySymbol)}</dd></div>
-            <div><dt>Ganancia real ({profitMarginPercent.toFixed(2)}%)</dt><dd>{money(calculation.profitAmount, settings?.currencySymbol)}</dd></div>
-            <div><dt>Impuesto</dt><dd>{money(calculation.taxAmount, settings?.currencySymbol)}</dd></div>
-          </dl>
+        {!calculation ? <div className="summary-placeholder"><Calculator size={34} /><p>Completa los datos y calcula para ver el precio final.</p></div> : <>
+          <div className="price-hero"><small>Total sugerido</small><strong>{money(customPrice > 0 ? customPrice : calculation.recommendedPrice, settings?.currencySymbol)}</strong><span>Multiplicador aplicado: x{form.profitMultiplier || 3}</span><label>Editar precio final<input type="number" min="0.01" step="0.01" value={customPrice || calculation.recommendedPrice} onChange={e => setCustomPrice(Math.max(0, Number(e.target.value)))} /></label></div>
+          {calculation.transportCost > 0 && <dl className="breakdown"><div><dt>Transporte</dt><dd>{money(calculation.transportCost, settings?.currencySymbol)}</dd></div></dl>}
         </>}
         {saved && <div className="saved-ticket"><CheckCircle2 size={19} /><div><small>Codigo guardado</small><strong>{saved.orderCode}</strong></div><StatusSale sold={sold} /><button className="icon ghost" title="Descargar comprobante PDF" onClick={() => api.downloadVoucher(saved.id).catch(reason => setError((reason as Error).message))}><Download size={16} /></button></div>}
         <div className="summary-actions">
