@@ -18,7 +18,8 @@ export function SettingsPage({ profile, isAdmin, onProfileChange }: { profile: P
   const [products, setProducts] = useState<ProductCatalog[]>([]); const [newProduct, setNewProduct] = useState('')
   const [error, setError] = useState(''); const [success, setSuccess] = useState(''); const [busy, setBusy] = useState(false)
   const [workspaceLogo, setWorkspaceLogo] = useState(profile.logoUrl || '')
-  useEffect(() => { Promise.all([api.settings(), api.products()]).then(([value, catalog]) => { setSettings(value); setProducts(catalog) }).catch(reason => setError((reason as Error).message)) }, [])
+  useEffect(() => { api.settings().then(setSettings).catch(reason => setError((reason as Error).message)) }, [])
+  useEffect(() => { if (tab !== 'general' || products.length > 0) return; api.products().then(setProducts).catch(reason => setError((reason as Error).message)) }, [tab, products.length])
 
   async function save(event: FormEvent) { event.preventDefault(); if (!settings) return; setBusy(true); setError(''); try { const saved = await api.saveSettings(settings); if (canEditSettings) await api.updateWorkspaceBranding({ name: saved.businessName, logoUrl: workspaceLogo || undefined }); setSettings(saved); onProfileChange(await api.me()); setSuccess(tab === 'customization' ? 'Personalizacion guardada.' : 'Configuracion guardada.') } catch (reason) { setError((reason as Error).message) } finally { setBusy(false) } }
   async function readWorkspaceLogo(event: ChangeEvent<HTMLInputElement>) { const file = event.target.files?.[0]; if (!file) return; if (file.size > 1_500_000) { setError('El logo debe pesar como máximo 1.5 MB.'); return }; setWorkspaceLogo(await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('No se pudo leer el logo.')); reader.readAsDataURL(file) })) }
