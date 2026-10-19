@@ -38,7 +38,7 @@ public sealed class TenantsController(
             return Conflict(new { message = "Ya existe una cuenta con ese identificador." });
 
         if (await users.FindByNameAsync(request.Username.Trim()) is not null)
-            return Conflict(new { message = "Ese nombre de usuario ya estÃƒÂ¡ en uso. Elige uno diferente." });
+            return Conflict(new { message = "Ese nombre de usuario ya estÃƒÆ’Ã‚Â¡ en uso. Elige uno diferente." });
 
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<IActionResult>(async () =>
@@ -118,13 +118,79 @@ public sealed class TenantsController(
         });
     }
 
+    public sealed record AdministratorRequest(string Username, string DisplayName, string? Email, string? Password, bool Active = true);
+
+    [HttpGet("{id:guid}/administrators")]
+    public async Task<IActionResult> ListAdministrators(Guid id, CancellationToken ct)
+    {
+        if (!await db.Tenants.IgnoreQueryFilters().AnyAsync(x => x.Id == id, ct)) return NotFound();
+        var items = await users.Users.Where(x => x.TenantId == id).OrderBy(x => x.UserName).ToListAsync(ct);
+        var result = new List<object>();
+        foreach (var item in items)
+            if (await users.IsInRoleAsync(item, AppRoles.Administrator)) result.Add(AdministratorDto(item));
+        return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/administrators")]
+    public async Task<IActionResult> CreateAdministrator(Guid id, AdministratorRequest request, CancellationToken ct)
+    {
+        if (!await db.Tenants.IgnoreQueryFilters().AnyAsync(x => x.Id == id && x.Active, ct)) return NotFound();
+        ValidateUser(request.Username, request.DisplayName);
+        if (string.IsNullOrWhiteSpace(request.Password)) return BadRequest(new { message = "La contrasena inicial es obligatoria." });
+        if (await users.FindByNameAsync(request.Username.Trim()) is not null) return Conflict(new { message = "Ese usuario ya esta en uso." });
+        var user = new ApplicationUser { UserName = request.Username.Trim(), DisplayName = request.DisplayName.Trim(), Email = NullIfWhiteSpace(request.Email), EmailConfirmed = !string.IsNullOrWhiteSpace(request.Email), TenantId = id, Active = request.Active, IsMakerOwner = false };
+        var created = await users.CreateAsync(user, request.Password);
+        if (!created.Succeeded) return IdentityError(created);
+        var assigned = await users.AddToRoleAsync(user, AppRoles.Administrator);
+        if (!assigned.Succeeded) { await users.DeleteAsync(user); return IdentityError(assigned); }
+        return Created($"/api/tenants/{id}/administrators/{user.Id}", AdministratorDto(user));
+    }
+
+    [HttpPut("{id:guid}/administrators/{userId:guid}")]
+    public async Task<IActionResult> UpdateAdministrator(Guid id, Guid userId, AdministratorRequest request, CancellationToken ct)
+    {
+        ValidateUser(request.Username, request.DisplayName);
+        var user = await users.Users.FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == id, ct);
+        if (user is null || !await users.IsInRoleAsync(user, AppRoles.Administrator)) return NotFound();
+        if (!request.Active && await ActiveAdministratorCount(id) <= 1) return BadRequest(new { message = "La empresa debe mantener al menos un administrador activo." });
+        var currentName = user.UserName ?? string.Empty;
+        if (!string.Equals(currentName, request.Username.Trim(), StringComparison.OrdinalIgnoreCase) && await users.FindByNameAsync(request.Username.Trim()) is not null) return Conflict(new { message = "Ese usuario ya esta en uso." });
+        user.UserName = request.Username.Trim(); user.DisplayName = request.DisplayName.Trim(); user.Email = NullIfWhiteSpace(request.Email); user.EmailConfirmed = !string.IsNullOrWhiteSpace(request.Email); user.Active = request.Active;
+        var updated = await users.UpdateAsync(user);
+        if (!updated.Succeeded) return IdentityError(updated);
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            var token = await users.GeneratePasswordResetTokenAsync(user);
+            var reset = await users.ResetPasswordAsync(user, token, request.Password);
+            if (!reset.Succeeded) return IdentityError(reset);
+        }
+        return Ok(AdministratorDto(user));
+    }
+
+    [HttpDelete("{id:guid}/administrators/{userId:guid}")]
+    public async Task<IActionResult> DeleteAdministrator(Guid id, Guid userId, CancellationToken ct)
+    {
+        var user = await users.Users.FirstOrDefaultAsync(x => x.Id == userId && x.TenantId == id, ct);
+        if (user is null || !await users.IsInRoleAsync(user, AppRoles.Administrator)) return NotFound();
+        if (await ActiveAdministratorCount(id) <= 1 && user.Active) return BadRequest(new { message = "La empresa debe mantener al menos un administrador activo." });
+        var deleted = await users.DeleteAsync(user);
+        return deleted.Succeeded ? NoContent() : IdentityError(deleted);
+    }
+
+    private async Task<int> ActiveAdministratorCount(Guid tenantId)
+    {
+        var admins = await users.GetUsersInRoleAsync(AppRoles.Administrator);
+        return admins.Count(x => x.TenantId == tenantId && x.Active);
+    }
+
+    private static object AdministratorDto(ApplicationUser user) => new { user.Id, user.UserName, user.DisplayName, user.Email, user.Active, user.CreatedAtUtc, Role = AppRoles.Administrator };
     private static TenantDto ToDto(Tenant tenant, int users) => new(tenant.Id, tenant.Name, tenant.Slug, tenant.Kind, tenant.LogoUrl, tenant.Active, tenant.CreatedAtUtc, users);
 
     private static void ValidateTenant(string name, string slug, string? logo)
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120) throw new ArgumentException("El nombre de la cuenta es obligatorio y admite hasta 120 caracteres.");
         if (string.IsNullOrWhiteSpace(slug) || slug.Trim().Length > 80) throw new ArgumentException("El identificador de la cuenta es obligatorio y admite hasta 80 caracteres.");
-        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, nÃƒÆ’Ã‚Âºmeros y guiones.");
+        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmeros y guiones.");
         if (!string.IsNullOrWhiteSpace(logo) && logo.Length > 2_000_000) throw new ArgumentException("El logo es demasiado grande.");
     }
 
