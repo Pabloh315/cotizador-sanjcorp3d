@@ -38,7 +38,7 @@ public sealed class TenantsController(
             return Conflict(new { message = "Ya existe una cuenta con ese identificador." });
 
         if (await users.FindByNameAsync(request.Username.Trim()) is not null)
-            return Conflict(new { message = "Ese nombre de usuario ya estÃ¡ en uso. Elige uno diferente." });
+            return Conflict(new { message = "Ese nombre de usuario ya estÃƒÂ¡ en uso. Elige uno diferente." });
 
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<IActionResult>(async () =>
@@ -71,7 +71,7 @@ public sealed class TenantsController(
     public async Task<IActionResult> Update(Guid id, UpdateTenantRequest request, CancellationToken ct)
     {
         ValidateTenant(request.Name, "valid-slug", request.LogoUrl);
-        var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id && x.Kind == "maker", ct);
+        var tenant = await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (tenant is null) return NotFound();
         tenant.Name = request.Name.Trim(); tenant.LogoUrl = CleanLogo(request.LogoUrl); tenant.Active = request.Active;
         await db.SaveChangesAsync(ct);
@@ -124,7 +124,7 @@ public sealed class TenantsController(
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120) throw new ArgumentException("El nombre de la cuenta es obligatorio y admite hasta 120 caracteres.");
         if (string.IsNullOrWhiteSpace(slug) || slug.Trim().Length > 80) throw new ArgumentException("El identificador de la cuenta es obligatorio y admite hasta 80 caracteres.");
-        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, nÃƒÂºmeros y guiones.");
+        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, nÃƒÆ’Ã‚Âºmeros y guiones.");
         if (!string.IsNullOrWhiteSpace(logo) && logo.Length > 2_000_000) throw new ArgumentException("El logo es demasiado grande.");
     }
 
