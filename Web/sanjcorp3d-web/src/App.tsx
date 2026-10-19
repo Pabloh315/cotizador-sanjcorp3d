@@ -22,9 +22,7 @@ import { PublicHome } from './pages/PublicHome'
 import { hasAnyRole, roleLabel } from './ui'
 
 type PageKey = 'dashboard' | 'quote' | 'storeQuote' | 'storeProducts' | 'orders' | 'printers' | 'consumables' | 'materials' | 'history' | 'reports' | 'users' | 'settings' | 'help' | 'chat' | 'supreme'
-const brandName = 'Atlas Impresiones 3D'
-const lightLogo = '/logo.png'
-const darkLogo = '/logoblanco.png'
+const brandName = 'Atlas Solutions'
 const themeKey = 'atlas.theme'
 const routeKey = 'atlas.route'
 type ThemeMode = 'light' | 'dark'
@@ -34,7 +32,6 @@ export function App() {
   const [loading, setLoading] = useState(true)
   const [route, setRoute] = useState(() => window.location.hash.slice(1))
   const [theme, setTheme] = useState<ThemeMode>(() => (localStorage.getItem(themeKey) as ThemeMode | null) ?? 'light')
-  const logo = theme === 'dark' ? darkLogo : lightLogo
   const toggleTheme = () => setTheme(current => {
     const next = current === 'dark' ? 'light' : 'dark'
     localStorage.setItem(themeKey, next)
@@ -44,11 +41,11 @@ export function App() {
   useEffect(() => { const listener = () => setRoute(window.location.hash.slice(1)); window.addEventListener('hashchange', listener); return () => window.removeEventListener('hashchange', listener) }, [])
   useEffect(() => { api.me().then(setProfile).catch(() => setProfile(null)).finally(() => setLoading(false)) }, [])
   if (loading) return <main className="center"><div className="spinner" aria-label="Cargando" /></main>
-  if (!profile) return route === 'login' ? <Login onSuccess={setProfile} onBack={() => { window.location.hash = ''; setRoute('') }} theme={theme} logo={logo} onToggleTheme={toggleTheme} /> : <PublicHome onLoginClick={() => { window.location.hash = 'login'; setRoute('login') }} theme={theme} onToggleTheme={toggleTheme} />
-  return <Application profile={profile} theme={theme} logo={logo} onToggleTheme={toggleTheme} onProfileChange={setProfile} onLogout={() => api.logout().finally(() => { localStorage.removeItem(routeKey); setProfile(null); window.location.hash = '' })} />
+  if (!profile) return route === 'login' ? <Login onSuccess={setProfile} onBack={() => { window.location.hash = ''; setRoute('') }} theme={theme} onToggleTheme={toggleTheme} /> : <PublicHome onLoginClick={() => { window.location.hash = 'login'; setRoute('login') }} theme={theme} onToggleTheme={toggleTheme} />
+  return <Application profile={profile} theme={theme} onToggleTheme={toggleTheme} onProfileChange={setProfile} onLogout={() => api.logout().finally(() => { localStorage.removeItem(routeKey); setProfile(null); window.location.hash = '' })} />
 }
 
-function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (profile: Profile) => void; onBack: () => void; theme: ThemeMode; logo: string; onToggleTheme: () => void }) {
+function Login({ onSuccess, onBack, theme, onToggleTheme }: { onSuccess: (profile: Profile) => void; onBack: () => void; theme: ThemeMode; onToggleTheme: () => void }) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [code, setCode] = useState('')
@@ -77,8 +74,8 @@ function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (
 
   return <main className="login-shell">
     <section className="brand-panel"><button type="button" className="back-link public-back" onClick={onBack}>Volver a la pÃƒÂ¡gina principal</button>
-      <div className="brand-logo"><img src={logo} alt={brandName} /></div>
-      <p className="eyebrow">ATLAS IMPRESIONES 3D</p>
+      <div className="brand-logo"><ShieldCheck size={28} /></div>
+      <p className="eyebrow">ATLAS SOLUTIONS</p>
       <h1>Control preciso para cada impresiÃƒÂ³n.</h1>
       <p className="lead">Cotizaciones, inventario, pedidos y ventas en un espacio privado diseÃƒÂ±ado para tu equipo.</p>
       <div className="security-note"><ShieldCheck size={20} /><span>Acceso protegido, permisos por rol y datos organizados.</span></div>
@@ -102,7 +99,7 @@ function Login({ onSuccess, onBack, theme, logo, onToggleTheme }: { onSuccess: (
   </main>
 }
 
-function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onLogout }: { profile: Profile; theme: ThemeMode; logo: string; onToggleTheme: () => void; onProfileChange: (profile: Profile) => void; onLogout: () => void }) {
+function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout }: { profile: Profile; theme: ThemeMode; onToggleTheme: () => void; onProfileChange: (profile: Profile) => void; onLogout: () => void }) {
   const [route, setRoute] = useState(() => window.location.hash.slice(1) || localStorage.getItem(routeKey) || 'dashboard')
   const [mobileOpen, setMobileOpen] = useState(false)
   useEffect(() => { const listener = () => { const next = window.location.hash.slice(1) || localStorage.getItem(routeKey) || 'dashboard'; setRoute(next); localStorage.setItem(routeKey, next) }; listener(); window.addEventListener('hashchange', listener); return () => window.removeEventListener('hashchange', listener) }, [])
@@ -141,8 +138,11 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
     ] },
   ].filter(group => group.items.length > 0)
   const visibleNavigationGroups: Array<{ label: string; items: NavItem[] }> = isSuperAdmin ? [{ label: 'Sistema', items: [navItem('supreme', 'Administracion', ShieldCheck)] }] : navigationGroups
-  const activeWorkspace = profile.workspaces?.find(x => x.id === (profile.tenantId ?? sessionStorage.getItem('sanjcorp.tenant')))
-  const receiptLogo = isSuperAdmin ? (profile.workspaces?.find(x => x.kind === 'technology')?.logoUrl ?? profile.logoUrl ?? logo) : (activeWorkspace?.logoUrl ?? profile.logoUrl ?? logo)
+  const activeWorkspace = profile.workspaces?.find(x => x.id === profile.tenantId)
+  const companyLogo = activeWorkspace?.logoUrl ?? profile.logoUrl
+  const companyName = profile.tenantName?.trim() || 'Empresa 3D'
+  const receiptLogo = companyLogo
+  const userImage = profile.profilePhotoUrl || companyLogo
   let content
   switch (page) {
     case 'supreme': content = isSuperAdmin ? <SupremeAdminPage /> : <DashboardPage goTo={goTo} />; break
@@ -154,7 +154,7 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
     case 'printers': content = <PrintersPage canManage={isAdmin} canFavorite={!isSuperAdmin} />; break
     case 'consumables': content = <ConsumablesPage canEdit={canCatalog} />; break
     case 'materials': content = <MaterialsPage canEdit={canCatalog} />; break
-    case 'history': content = <HistoryPage initialId={initialHistoryId} canSale={canSale} isAdmin={isAdmin} logoUrl={receiptLogo} businessName={profile.tenantName || brandName} />; break
+    case 'history': content = <HistoryPage initialId={initialHistoryId} canSale={canSale} isAdmin={isAdmin} logoUrl={receiptLogo} businessName={companyName} />; break
     case 'reports': content = <ReportsPage />; break
     case 'users': content = isAdmin ? <UsersPage /> : <DashboardPage goTo={goTo} />; break
     case 'settings': content = <SettingsPage profile={profile} isAdmin={isAdmin} onProfileChange={onProfileChange} />; break
@@ -163,8 +163,8 @@ function Application({ profile, theme, logo, onToggleTheme, onProfileChange, onL
   }
   return <div className="app-shell">
     {mobileOpen && <button className="sidebar-scrim" aria-label="Cerrar menu" onClick={() => setMobileOpen(false)} />}
-    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-logo small-mark"><img src={logo} alt={brandName} /></div><div><strong>{isSuperAdmin ? 'ADMINISTRACION' : 'ATLAS'}</strong><span>{isSuperAdmin ? 'PANEL SUPREMO' : 'IMPRESIONES 3D'}</span></div><button className="icon mobile-close" onClick={() => setMobileOpen(false)}><X size={20} /></button></div><nav>{visibleNavigationGroups.map(group => <section className="nav-section" key={group.label}><p>{group.label}</p>{group.items.map(({ key, label, icon: Icon }) => <button key={key} className={page === key ? 'active' : ''} onClick={() => goTo(key)}><Icon size={18} /><span>{label}</span></button>)}</section>)}</nav><div className="sidebar-footer"><div className="signed-user"><div className="avatar"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div><div><strong>{profile.displayName}</strong><span>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Cerrar sesiÃƒÂ³n</button></div></aside>
-    <div className="workspace"><header className="topbar"><button className="icon menu-button" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div><span className="connection-dot" />{isSuperAdmin ? 'Panel de administraciÃƒÂ³n' : brandName}</div>{isSuperAdmin && <select className="workspace-switcher" value={supremeMode} onChange={e => { const mode = e.target.value as 'technology' | 'makers'; setSupremeMode(mode); sessionStorage.setItem('sanjcorp.mode', mode); goTo('supreme') }}><option value="technology">{brandName}</option><option value="makers">Makers</option></select>}<button type="button" className="theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>{!isSuperAdmin && <InventoryAlerts onOpen={() => goTo('consumables')} />}<details className="profile-menu"><summary className="profile-chip"><span>{profile.displayName}</span><div className="avatar mini"><img src={profile.profilePhotoUrl || logo} alt="Logo del espacio" /></div></summary><div className="profile-popover"><small>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</small>{!isSuperAdmin && <button onClick={() => goTo('settings')}>ConfiguraciÃƒÂ³n</button>}<button onClick={onLogout}>Cerrar sesiÃƒÂ³n</button></div></details></header><main className="page-content">{content}</main><footer className="site-copyright">{profile.tenantName || brandName} - Todos los derechos reservados.</footer></div>
+    <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}><div className="sidebar-brand"><div className="brand-logo small-mark">{companyLogo ? <img src={companyLogo} alt={`Logo de ${companyName}`} /> : <ShieldCheck size={20} />}</div><div><strong>{isSuperAdmin ? 'ADMINISTRACION' : companyName}</strong><span>{isSuperAdmin ? 'PANEL SUPREMO' : 'ESPACIO EMPRESARIAL'}</span></div><button className="icon mobile-close" onClick={() => setMobileOpen(false)}><X size={20} /></button></div><nav>{visibleNavigationGroups.map(group => <section className="nav-section" key={group.label}><p>{group.label}</p>{group.items.map(({ key, label, icon: Icon }) => <button key={key} className={page === key ? 'active' : ''} onClick={() => goTo(key)}><Icon size={18} /><span>{label}</span></button>)}</section>)}</nav><div className="sidebar-footer"><div className="signed-user"><div className="avatar">{userImage ? <img src={userImage} alt="Perfil o logo de la empresa" /> : profile.displayName.slice(0, 2).toUpperCase()}</div><div><strong>{profile.displayName}</strong><span>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</span></div></div><button className="logout" onClick={onLogout}><LogOut size={17} />Cerrar sesion</button></div></aside>
+    <div className="workspace"><header className="topbar"><button className="icon menu-button" onClick={() => setMobileOpen(true)}><Menu size={21} /></button><div><span className="connection-dot" />{isSuperAdmin ? 'Panel de administracion' : companyName}</div>{isSuperAdmin && <select className="workspace-switcher" value={supremeMode} onChange={e => { const mode = e.target.value as 'technology' | 'makers'; setSupremeMode(mode); goTo('supreme') }}><option value="technology">{brandName}</option><option value="makers">Makers</option></select>}<button type="button" className="theme-toggle" onClick={onToggleTheme}>{theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}{theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}</button>{!isSuperAdmin && <InventoryAlerts onOpen={() => goTo('consumables')} />}<details className="profile-menu"><summary className="profile-chip"><span>{profile.displayName}</span><div className="avatar mini">{userImage ? <img src={userImage} alt="Perfil o logo de la empresa" /> : profile.displayName.slice(0, 2).toUpperCase()}</div></summary><div className="profile-popover"><small>{isSuperAdmin ? 'Administrador supremo' : profile.roles.map(roleLabel).join(' - ')}</small>{!isSuperAdmin && <button onClick={() => goTo('settings')}>Configuracion</button>}<button onClick={onLogout}>Cerrar sesion</button></div></details></header><main className="page-content">{content}</main><footer className="site-copyright">{companyName} - Todos los derechos reservados.</footer></div>
   </div>
 }
 

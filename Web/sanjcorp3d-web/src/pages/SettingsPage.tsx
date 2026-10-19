@@ -10,7 +10,7 @@ const marginToMultiplier = (margin: number) => Number((1 + Math.max(minProfitMar
 const multiplierToMargin = (multiplier: number) => Number(Math.max(minProfitMargin, ((Number.isFinite(multiplier) ? multiplier : 1.25) - 1) * 100).toFixed(2))
 
 export function SettingsPage({ profile, isAdmin, onProfileChange }: { profile: Profile; isAdmin: boolean; onProfileChange: (profile: Profile) => void }) {
-  const canEditSettings = isAdmin || (profile.tenantKind === 'maker' && profile.isMakerOwner === true)
+  const canEditSettings = isAdmin
   const [settings, setSettings] = useState<BusinessSettings>()
   const [tab, setTab] = useState<'general' | 'security' | 'backup'>('general')
   const [setup, setSetup] = useState<TwoFactorSetup>(); const [code, setCode] = useState(''); const [recoveryCodes, setRecoveryCodes] = useState<string[]>([])
