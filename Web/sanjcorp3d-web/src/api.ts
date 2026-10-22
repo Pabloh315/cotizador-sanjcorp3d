@@ -1,6 +1,6 @@
 import type {
   BusinessSettings, Consumable, Dashboard, ExtraMaterial, ExtraMaterialCategory, Printer, Profile, QuoteCalculation,
-  QuoteDetail, QuoteRequest, QuoteSummary, Report, TwoFactorSetup, UserAccount, InventoryAlert, Tenant, ChatMessage, ProductCatalog, ConsumableMaterialType, PrintOrder, StoreQuoteRequest, StoreQuoteCalculation,
+  QuoteDetail, QuoteRequest, QuoteSummary, Report, TwoFactorSetup, UserAccount, InventoryAlert, Tenant, ChatMessage, SupportConversation, ProductCatalog, ConsumableMaterialType, PrintOrder, StoreQuoteRequest, StoreQuoteCalculation,
 } from './types'
 
 export type { Dashboard, Profile } from './types'
@@ -143,8 +143,9 @@ export const api = {
   updateTenantAdministrator: (tenantId: string, userId: string, item: { username: string; displayName: string; email?: string; password?: string; active: boolean }) => request<UserAccount>(`/api/tenants/${tenantId}/administrators/${userId}`, { method: 'PUT', body: JSON.stringify(item) }),
   deleteTenantAdministrator: (tenantId: string, userId: string) => request<void>(`/api/tenants/${tenantId}/administrators/${userId}`, { method: 'DELETE' }),
   createMakerUser: (tenantId: string, item: { username: string; displayName: string; email?: string; password: string }) => request<UserAccount>(`/api/tenants/${tenantId}/users`, { method: 'POST', body: JSON.stringify(item) }),
-  chat: (after?: number) => request<ChatMessage[]>(`/api/chat${query({ after })}`),
-  sendChat: (body: string, photoUrl?: string) => request<ChatMessage>('/api/chat', { method: 'POST', body: JSON.stringify({ body, photoUrl }) }),
+  chat: (tenantId?: string, after?: number) => request<ChatMessage[]>(`/api/chat${query({ tenantId, after })}`),
+  supportConversations: () => request<SupportConversation[]>('/api/chat/conversations'),
+  sendChat: (body: string, attachment?: { url: string; name: string; contentType: string }, tenantId?: string) => request<ChatMessage>('/api/chat', { method: 'POST', body: JSON.stringify({ body, attachmentUrl: attachment?.url, attachmentName: attachment?.name, attachmentContentType: attachment?.contentType, tenantId }) }),
   printOrders: () => request<PrintOrder[]>(`/api/print-orders`),
   startPrintOrder: (id: number) => request<PrintOrder>(`/api/print-orders/${id}/start`, { method: 'POST' }),
   finishPrintOrder: (id: number) => request<PrintOrder>(`/api/print-orders/${id}/finish`, { method: 'POST' }),

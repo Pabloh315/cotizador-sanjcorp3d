@@ -120,7 +120,7 @@ function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout 
       navItem('quote', 'Cotizador', Calculator),
       navItem('storeQuote', 'Cotizaciones tienda', ShoppingCart),
       ...(canOrders ? [navItem('orders', 'Pedidos', ClipboardList)] : []),
-      navItem('chat', 'Chat', MessageCircle),
+      ...(isAdmin ? [navItem('chat', 'Soporte interno', MessageCircle)] : []),
     ] },
     { label: 'Catalogos', items: [
       ...(canCatalog ? [navItem('storeProducts', 'Productos tienda', PackagePlus)] : []),
@@ -137,7 +137,7 @@ function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout 
       ...(isSuperAdmin ? [navItem('supreme', 'Administrar espacios', ShieldCheck, true)] : []),
     ] },
   ].filter(group => group.items.length > 0)
-  const visibleNavigationGroups: Array<{ label: string; items: NavItem[] }> = isSuperAdmin ? [{ label: 'Sistema', items: [navItem('supreme', 'Administracion', ShieldCheck)] }] : navigationGroups
+  const visibleNavigationGroups: Array<{ label: string; items: NavItem[] }> = isSuperAdmin ? [{ label: 'Sistema', items: [navItem('supreme', 'Administracion', ShieldCheck), navItem('chat', 'Soporte interno', MessageCircle)] }] : navigationGroups
   const activeWorkspace = profile.workspaces?.find(x => x.id === profile.tenantId)
   const companyLogo = activeWorkspace?.logoUrl ?? profile.logoUrl
   const companyName = profile.tenantName?.trim() || 'Empresa 3D'
@@ -146,7 +146,7 @@ function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout 
   let content
   switch (page) {
     case 'supreme': content = isSuperAdmin ? <SupremeAdminPage /> : <DashboardPage goTo={goTo} />; break
-    case 'chat': content = <ChatPage profile={profile} />; break
+    case 'chat': content = isAdmin ? <ChatPage profile={profile} isSuperAdmin={isSuperAdmin} /> : <DashboardPage goTo={goTo} />; break
     case 'quote': content = <QuotePage canWrite={canSale} />; break
     case 'storeQuote': content = <StoreQuotePage canWrite={canSale} />; break
     case 'storeProducts': content = canCatalog ? <StoreProductsPage canManage={canCatalog} /> : <DashboardPage goTo={goTo} />; break

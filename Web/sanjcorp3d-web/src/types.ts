@@ -88,7 +88,8 @@ export type UserAccount = {
   lastLoginAtUtc?: string; twoFactorEnabled: boolean; role: string
 }
 export type Tenant = { id: string; name: string; slug: string; kind: string; logoUrl?: string; active: boolean; userCount: number }
-export type ChatMessage = { id: number; tenantId: string; senderUserId: string; senderName: string; body: string; photoUrl?: string; createdAtUtc: string }
+export type ChatMessage = { id: number; tenantId: string; senderUserId: string; senderName: string; body: string; photoUrl?: string; attachmentName?: string; attachmentContentType?: string; createdAtUtc: string }
+export type SupportConversation = { id: string; name: string; logoUrl?: string; lastMessageAtUtc?: string }
 export type ProductCatalog = { id: number; name: string; description: string; materialType: string; filamentGrams: number; materialCost: number; additionalMaterialCost: number; productionMinutes: number; maintenancePercent: number; preparationPercent: number; laborPercent: number; wastePercent: number; overheadPercent: number; packagingCost: number; profitMultiplier: number; active: boolean }
 export type StoreQuoteLine = { productId: number; quantity: number; materialType?: string; consumableId?: number }
 export type StoreQuoteRequest = { customer: string; customerPhone?: string; projectName?: string; printerIds: number[]; notes?: string; lines: StoreQuoteLine[]; packagingCost?: number; transportCost?: number }

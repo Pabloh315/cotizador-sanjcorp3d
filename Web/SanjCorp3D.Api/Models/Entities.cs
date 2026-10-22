@@ -246,6 +246,9 @@ public sealed class ChatMessage : ITenantEntity
     public Guid SenderUserId { get; set; }
     public required string SenderName { get; set; }
     public required string Body { get; set; }
+    // Existing image data stays here so earlier conversation history remains available.
     public string? PhotoUrl { get; set; }
+    public string? AttachmentName { get; set; }
+    public string? AttachmentContentType { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }

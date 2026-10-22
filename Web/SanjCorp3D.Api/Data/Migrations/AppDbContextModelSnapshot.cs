@@ -268,6 +268,12 @@ namespace SanjCorp3D.Api.Data.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("AttachmentContentType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AttachmentName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Body")
                         .IsRequired()
                         .HasColumnType("text");
