@@ -58,4 +58,8 @@ public sealed record PrintOrderDto(
     long PrinterId, string PrinterName, string PrinterStatus, string Status,
     DateTime CreatedAtUtc, DateTime? StartedAtUtc, DateTime? EstimatedFinishedAtUtc,
     DateTime? FinishedAtUtc, DateTime? CoolingUntilUtc, DateTime? CompletedAtUtc,
-    decimal PrintHours, int Quantity, decimal RecommendedPrice);
+    decimal PrintHours, int Quantity, decimal RecommendedPrice,
+    IReadOnlyList<PrintOrderConsumableDto> Consumables);
+public sealed record PrintOrderConsumableDto(long ConsumableId, string Name, string Material, string Color, decimal PlannedGrams);
+public sealed record PrintFailureLineRequest(long ConsumableId, decimal Grams);
+public sealed record CancelPrintOrderRequest(string? Reason, IReadOnlyList<PrintFailureLineRequest> Consumables);

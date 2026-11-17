@@ -20,8 +20,17 @@ public sealed class ReportsController(AppDbContext db):ControllerBase
         var soldQuotes = quotes.Where(x => soldQuoteIds.Contains(x.Id)).ToList();
         var distribution=await db.QuoteConsumables.AsNoTracking().Where(x=>soldQuoteIds.Contains(x.QuoteId)).GroupBy(x=>x.Name).Select(x=>new{Name=x.Key,Grams=x.Sum(v=>v.Grams*v.Quote.Quantity)}).OrderByDescending(x=>x.Grams).ToListAsync(ct);
         var products = sales.GroupBy(x => string.IsNullOrWhiteSpace(x.ProductName) ? x.ProjectName : x.ProductName).Select(x => new { Name = x.Key, Quantity = x.Sum(v => v.Quantity), Revenue = x.Sum(v => v.SaleAmount) }).OrderByDescending(x => x.Quantity).ToList();
-        var losses = await db.InventoryLosses.AsNoTracking().Where(x => x.CreatedAtUtc >= start && x.CreatedAtUtc < end).GroupBy(x => x.Consumable.Name).Select(x => new { Name = x.Key, Grams = x.Sum(v => v.Grams) }).OrderByDescending(x => x.Grams).ToListAsync(ct);
-        return Ok(new{QuoteCount=quotes.Count,TotalCost=quotes.Sum(x=>x.Subtotal),ProjectedRevenue=quotes.Sum(x=>x.RecommendedPrice),ProjectedProfit=quotes.Sum(x=>x.ProfitAmount),SaleCount=sales.Count,SalesRevenue=sales.Sum(x=>x.SaleAmount),SalesProfit=sales.Sum(x=>x.Profit),Sales=sales,ProductDistribution=products,LossDistribution=losses,ConsumableDistribution=distribution,CostDistribution=new[]{new{Name="Consumibles",Value=soldQuotes.Sum(x=>x.MaterialCost)},new{Name="Electricidad",Value=soldQuotes.Sum(x=>x.ElectricityCost)},new{Name="Mantenimiento",Value=soldQuotes.Sum(x=>x.MaintenanceCost)},new{Name="Adicionales",Value=soldQuotes.Sum(x=>x.AdditionalCost)}}});
+        var lossRows = await db.InventoryLosses.AsNoTracking().Include(x => x.Consumable).Where(x => x.CreatedAtUtc >= start && x.CreatedAtUtc < end).OrderByDescending(x => x.CreatedAtUtc).ToListAsync(ct);
+        var lossDetails = lossRows.Select(x => new
+        {
+            x.Id, x.CreatedAtUtc, x.Grams, x.Reason,
+            ConsumableName = x.Consumable.Name, x.Consumable.Material, x.Consumable.Color,
+            EstimatedCost = decimal.Round(x.Consumable.Category.Equals("Resina", StringComparison.OrdinalIgnoreCase)
+                ? x.Grams / Math.Max(x.Consumable.Density, 0.0001m) / 1000m * x.Consumable.PricePerUnit
+                : x.Grams / 1000m * x.Consumable.PricePerUnit, 2, MidpointRounding.AwayFromZero)
+        }).ToList();
+        var losses = lossDetails.GroupBy(x => $"{x.ConsumableName} - {x.Material} - {x.Color}").Select(x => new { Name = x.Key, Grams = x.Sum(v => v.Grams) }).OrderByDescending(x => x.Grams).ToList();
+        return Ok(new{QuoteCount=quotes.Count,TotalCost=quotes.Sum(x=>x.Subtotal),ProjectedRevenue=quotes.Sum(x=>x.RecommendedPrice),ProjectedProfit=quotes.Sum(x=>x.ProfitAmount),SaleCount=sales.Count,SalesRevenue=sales.Sum(x=>x.SaleAmount),SalesProfit=sales.Sum(x=>x.Profit),Sales=sales,ProductDistribution=products,LossDistribution=losses,LossTotalGrams=lossDetails.Sum(x=>x.Grams),LossTotalCost=lossDetails.Sum(x=>x.EstimatedCost),LossDetails=lossDetails,ConsumableDistribution=distribution,CostDistribution=new[]{new{Name="Consumibles",Value=soldQuotes.Sum(x=>x.MaterialCost)},new{Name="Electricidad",Value=soldQuotes.Sum(x=>x.ElectricityCost)},new{Name="Mantenimiento",Value=soldQuotes.Sum(x=>x.MaintenanceCost)},new{Name="Adicionales",Value=soldQuotes.Sum(x=>x.AdditionalCost)}}});
     }
 
     [HttpGet("sales/export")]

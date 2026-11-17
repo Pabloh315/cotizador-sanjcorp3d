@@ -150,6 +150,7 @@ export const api = {
   startPrintOrder: (id: number) => request<PrintOrder>(`/api/print-orders/${id}/start`, { method: 'POST' }),
   finishPrintOrder: (id: number) => request<PrintOrder>(`/api/print-orders/${id}/finish`, { method: 'POST' }),
   completePrintOrderCooling: (id: number) => request<PrintOrder>(`/api/print-orders/${id}/cooling-complete`, { method: 'POST' }),
+  cancelPrintOrder: (id: number, reason: string, consumables: Array<{ consumableId: number; grams: number }>) => request<PrintOrder>(`/api/print-orders/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason, consumables }) }),
   products: (includeArchived = false) => request<ProductCatalog[]>(`/api/products${query({ includeArchived })}`),
   createProduct: (name: string) => request<ProductCatalog>('/api/products', { method: 'POST', body: JSON.stringify({ name }) }),
   saveStoreProduct: (item: ProductCatalog) => item.id ? request<ProductCatalog>(`/api/products/${item.id}`, { method: 'PATCH', body: JSON.stringify(item) }) : request<ProductCatalog>('/api/products', { method: 'POST', body: JSON.stringify(item) }),

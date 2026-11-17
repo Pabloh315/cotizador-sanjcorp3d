@@ -395,6 +395,17 @@ body.atlas-theme-light .wizard-steps button.active span {
 .order-dates { display: grid; gap: .22rem; min-width: 170px; }
 .order-dates small { color: var(--muted); font-size: .66rem; }
 .order-printer td:last-child { white-space: nowrap; }
+.order-action-group { display: flex; align-items: center; gap: .4rem; }
+.danger-status { color: #ff9a8f; background: rgba(255, 110, 94, .12); border-color: rgba(255, 110, 94, .35); }
+.print-failure-dialog { width: min(620px, 100%); max-height: min(760px, 92vh); overflow-y: auto; }
+.failure-materials { display: grid; gap: .6rem; margin: 1rem 0; }
+.failure-materials label { display: grid; grid-template-columns: minmax(0, 1fr) 110px auto; align-items: center; gap: .55rem; padding: .7rem; background: rgba(255, 255, 255, .035); border: 1px solid var(--line-soft); border-radius: 8px; }
+.failure-materials label > span { min-width: 0; display: grid; gap: .15rem; }
+.failure-materials strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .78rem; }
+.failure-materials small { color: var(--muted); font-size: .66rem; }
+.failure-materials input { text-align: right; }
+.failure-materials b { color: var(--muted); font-size: .72rem; }
+.failure-reason { margin-top: .75rem; }
 /* Catalogs */
 .catalog-layout { display: grid; gap: 1rem; }
 .catalog-layout.with-editor { grid-template-columns: minmax(0, 1fr) minmax(320px, 410px); align-items: start; }
@@ -448,6 +459,7 @@ body.atlas-theme-light .wizard-steps button.active span {
 .filters-panel { margin-bottom: 1rem; }
 .filters-panel .filters { margin: 0; }
 .sales-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: .8rem; }
+.loss-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: .8rem; }
 .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .chart-toggle { display: inline-flex; gap: .2rem; padding: .2rem; border: 1px solid var(--line); border-radius: 9px; }
 .chart-toggle button { display: inline-flex; align-items: center; gap: .35rem; padding: .5rem .7rem; border: 0; background: transparent; color: var(--muted); border-radius: 6px; }
@@ -564,7 +576,9 @@ body.atlas-theme-light .wizard-steps button.active span {
   .page-header { align-items: stretch; flex-direction: column; }
   .page-actions, .page-actions > button, .page-actions .button-group { width: 100%; }
   .button-group button { flex: 1; }
-  .metrics, .sales-metrics, .card-grid, .help-grid { grid-template-columns: 1fr; }
+  .metrics, .sales-metrics, .loss-metrics, .card-grid, .help-grid { grid-template-columns: 1fr; }
+  .order-action-group { align-items: stretch; flex-direction: column; }
+  .failure-materials label { grid-template-columns: 1fr 90px auto; }
   .form-grid.two, .form-grid.three { grid-template-columns: 1fr; }
   .span-2 { grid-column: auto; }
   .inline-form { grid-template-columns: 1fr 1fr; }

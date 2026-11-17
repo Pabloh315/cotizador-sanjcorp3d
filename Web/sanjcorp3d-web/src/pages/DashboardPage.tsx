@@ -24,7 +24,7 @@ export function DashboardPage({ goTo }: { goTo: (page: string) => void }) {
   const printerRows = useMemo(() => printers.map(printer => ({
     printer,
     orders: orders
-      .filter(order => order.printerId === printer.id && order.status !== 'Terminado')
+      .filter(order => order.printerId === printer.id && order.status !== 'Terminado' && order.status !== 'Cancelado')
       .sort((a, b) => new Date(a.createdAtUtc).getTime() - new Date(b.createdAtUtc).getTime() || a.id - b.id)
   })), [printers, orders])
 

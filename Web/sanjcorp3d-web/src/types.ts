@@ -77,6 +77,8 @@ export type Report = {
   saleCount: number; salesRevenue: number; salesProfit: number; sales: SaleSummary[]
   consumableDistribution: Array<{ name: string; grams: number }>; costDistribution: Array<{ name: string; value: number }>
   productDistribution: Array<{ name: string; quantity: number; revenue: number }>; lossDistribution: Array<{ name: string; grams: number }>
+  lossTotalGrams: number; lossTotalCost: number
+  lossDetails: Array<{ id: number; createdAtUtc: string; grams: number; reason: string; consumableName: string; material: string; color: string; estimatedCost: number }>
 }
 
 export type SaleSummary = {
@@ -99,9 +101,10 @@ export type ConsumableMaterialType = { id: number; name: string; active: boolean
 
 export type TwoFactorSetup = { sharedKey: string; authenticatorUri: string }
 
+export type PrintOrderConsumable = { consumableId: number; name: string; material: string; color: string; plannedGrams: number }
 export type PrintOrder = {
   id: number; quoteId: number; orderCode: string; customer: string; projectName: string; productName?: string
-  printerId: number; printerName: string; printerStatus: string; status: 'Pendiente' | 'Imprimiendo' | 'Enfriamiento' | 'Terminado'
+  printerId: number; printerName: string; printerStatus: string; status: 'Pendiente' | 'Imprimiendo' | 'Enfriamiento' | 'Terminado' | 'Cancelado'
   createdAtUtc: string; startedAtUtc?: string; estimatedFinishedAtUtc?: string; finishedAtUtc?: string; coolingUntilUtc?: string; completedAtUtc?: string
-  printHours: number; quantity: number; recommendedPrice: number
+  printHours: number; quantity: number; recommendedPrice: number; consumables: PrintOrderConsumable[]
 }

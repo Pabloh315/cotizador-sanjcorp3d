@@ -41,7 +41,7 @@ export function StoreQuotePage({ canWrite }: { canWrite: boolean }) {
 
   useEffect(() => {
     Promise.all([api.products(), api.printers(), api.settings(), api.printOrders()]).then(([productItems, printerItems, config, orderItems]) => {
-      const busyPrinterIds = new Set((orderItems as PrintOrder[]).filter(x => x.status !== 'Terminado').map(x => x.printerId))
+      const busyPrinterIds = new Set((orderItems as PrintOrder[]).filter(x => x.status !== 'Terminado' && x.status !== 'Cancelado').map(x => x.printerId))
       const availablePrinters = printerItems.filter(x => x.active && !busyPrinterIds.has(x.id))
       setProducts(productItems.filter(x => x.active)); setPrinters(availablePrinters); setSettings(config)
       setPrinterIds(availablePrinters[0] ? [availablePrinters[0].id] : [])

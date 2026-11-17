@@ -169,7 +169,7 @@ public sealed class QuotesController(AppDbContext db,BusinessSettingsService set
             }
             foreach (var assignedPrinterId in assignedPrinterIds.Distinct())
             {
-                if (await db.PrintOrders.AnyAsync(x => x.PrinterId == assignedPrinterId && x.Status != "Terminado", ct))
+                if (await db.PrintOrders.AnyAsync(x => x.PrinterId == assignedPrinterId && x.Status != "Terminado" && x.Status != "Cancelado", ct))
                     return Conflict(new { message = "Una de las impresoras seleccionadas ya tiene un pedido asignado. Debe terminar y enfriarse antes de recibir otro pedido." });
                 if (!await db.PrintOrders.AnyAsync(x => x.QuoteId == quote.Id && x.PrinterId == assignedPrinterId, ct))
                     db.PrintOrders.Add(new PrintOrder { QuoteId = quote.Id, PrinterId = assignedPrinterId, Status = "Pendiente", CreatedAtUtc = DateTime.UtcNow });

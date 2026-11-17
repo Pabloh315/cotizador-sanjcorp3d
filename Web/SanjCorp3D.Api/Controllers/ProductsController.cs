@@ -161,7 +161,7 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         if (printers.Count != printerIds.Length) throw new ArgumentException("Una de las impresoras seleccionadas no existe o est archivada.");
         var busyPrinterNames = await db.PrintOrders.AsNoTracking()
             .Include(x => x.Printer)
-            .Where(x => printerIds.Contains(x.PrinterId) && x.Status != "Terminado")
+            .Where(x => printerIds.Contains(x.PrinterId) && x.Status != "Terminado" && x.Status != "Cancelado")
             .Select(x => x.Printer.Name)
             .Distinct()
             .ToListAsync(ct);
