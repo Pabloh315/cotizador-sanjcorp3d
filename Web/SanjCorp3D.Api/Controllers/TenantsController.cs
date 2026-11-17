@@ -106,6 +106,9 @@ public sealed class TenantsController(
             db.QuoteConsumables.RemoveRange(await db.QuoteConsumables.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.QuoteMaterials.RemoveRange(await db.QuoteMaterials.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.ChatMessages.RemoveRange(await db.ChatMessages.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
+            db.RetailSales.RemoveRange(await db.RetailSales.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
+            db.RetailAcquisitions.RemoveRange(await db.RetailAcquisitions.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
+            db.RetailProducts.RemoveRange(await db.RetailProducts.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.InventoryLosses.RemoveRange(await db.InventoryLosses.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.ConsumableStockLots.RemoveRange(await db.ConsumableStockLots.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.Quotes.RemoveRange(await db.Quotes.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));

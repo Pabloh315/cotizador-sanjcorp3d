@@ -18,10 +18,11 @@ import { SettingsPage } from './pages/SettingsPage'
 import { UsersPage } from './pages/UsersPage'
 import { SupremeAdminPage } from './pages/SupremeAdminPage'
 import { ChatPage } from './pages/ChatPage'
+import { RetailSalesPage } from './pages/RetailSalesPage'
 import { PublicHome } from './pages/PublicHome'
 import { hasAnyRole, roleLabel } from './ui'
 
-type PageKey = 'dashboard' | 'quote' | 'storeQuote' | 'storeProducts' | 'orders' | 'printers' | 'consumables' | 'materials' | 'history' | 'reports' | 'users' | 'settings' | 'help' | 'chat' | 'supreme'
+type PageKey = 'dashboard' | 'quote' | 'storeQuote' | 'storeProducts' | 'retailPrinters' | 'retailMaterials' | 'orders' | 'printers' | 'consumables' | 'materials' | 'history' | 'reports' | 'users' | 'settings' | 'help' | 'chat' | 'supreme'
 const brandName = 'Atlas Technologies'
 const themeKey = 'atlas.theme'
 const routeKey = 'atlas.route'
@@ -129,6 +130,7 @@ function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout 
       navItem('materials', 'Materiales', Layers3),
     ] },
     { label: 'Ventas y sistema', items: [
+      ...(canSale ? [navItem('retailPrinters', 'Ventas impresoras', Printer), navItem('retailMaterials', 'Ventas filamento', PackageSearch)] : []),
       navItem('history', 'Historial', FileClock),
       navItem('reports', 'Reportes y ventas', BarChart3),
       ...(isAdmin ? [navItem('users', 'Usuarios', Users, true)] : []),
@@ -150,6 +152,8 @@ function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout 
     case 'quote': content = <QuotePage canWrite={canSale} />; break
     case 'storeQuote': content = <StoreQuotePage canWrite={canSale} />; break
     case 'storeProducts': content = canCatalog ? <StoreProductsPage canManage={canCatalog} /> : <DashboardPage goTo={goTo} />; break
+    case 'retailPrinters': content = canSale ? <RetailSalesPage group="Printer" canManage={canSale} /> : <DashboardPage goTo={goTo} />; break
+    case 'retailMaterials': content = canSale ? <RetailSalesPage group="Material" canManage={canSale} /> : <DashboardPage goTo={goTo} />; break
     case 'orders': content = canOrders ? <OrdersPage canManage={canOrders} /> : <DashboardPage goTo={goTo} />; break
     case 'printers': content = <PrintersPage canManage={isAdmin} canFavorite={!isSuperAdmin} />; break
     case 'consumables': content = <ConsumablesPage canEdit={canCatalog} />; break

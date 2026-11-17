@@ -36,6 +36,9 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRo
     public DbSet<PrintOrder> PrintOrders => Set<PrintOrder>();
     public DbSet<BusinessSetting> BusinessSettings => Set<BusinessSetting>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<RetailProduct> RetailProducts => Set<RetailProduct>();
+    public DbSet<RetailAcquisition> RetailAcquisitions => Set<RetailAcquisition>();
+    public DbSet<RetailSale> RetailSales => Set<RetailSale>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -66,6 +69,9 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRo
         builder.Entity<PrintOrder>().Property(x => x.Status).HasMaxLength(32).HasDefaultValue("Pendiente");
         builder.Entity<BusinessSetting>().HasKey(x => new { x.TenantId, x.Key });
         builder.Entity<ChatMessage>().HasIndex(x => new { x.TenantId, x.CreatedAtUtc });
+        builder.Entity<RetailProduct>().HasIndex(x => new { x.TenantId, x.Category, x.Brand, x.Name, x.MaterialType, x.ColorName });
+        builder.Entity<RetailAcquisition>().HasIndex(x => new { x.TenantId, x.AcquiredAtUtc });
+        builder.Entity<RetailSale>().HasIndex(x => new { x.TenantId, x.SoldAtUtc });
         builder.Entity<QuoteConsumable>().HasKey(x => x.Id);
         builder.Entity<QuoteMaterial>().HasKey(x => x.Id);
         builder.Entity<SaleConsumable>().HasKey(x => x.Id);
@@ -103,6 +109,9 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRo
         builder.Entity<BusinessSetting>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
         builder.Entity<ChatMessage>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
         builder.Entity<PrintOrder>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
+        builder.Entity<RetailProduct>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
+        builder.Entity<RetailAcquisition>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
+        builder.Entity<RetailSale>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
         builder.Entity<InventoryLoss>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
         builder.Entity<ProductCatalog>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
         builder.Entity<ConsumableMaterialType>().HasQueryFilter(x => CurrentTenantId.HasValue && x.TenantId == CurrentTenantId);
@@ -118,10 +127,14 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRo
         builder.Entity<PrintOrder>().HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<ProductCatalog>().HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<ConsumableMaterialType>().HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<RetailProduct>().HasOne<Tenant>().WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<RetailProduct>().HasMany(x => x.Acquisitions).WithOne(x => x.Product).HasForeignKey(x => new { x.TenantId, x.ProductId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<RetailProduct>().HasMany(x => x.Sales).WithOne(x => x.Product).HasForeignKey(x => new { x.TenantId, x.ProductId }).HasPrincipalKey(x => new { x.TenantId, x.Id }).OnDelete(DeleteBehavior.Restrict);
         builder.Entity<Quote>().HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.Entity<Sale>().HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.Entity<Consumable>().HasAlternateKey(x => new { x.TenantId, x.Id });
         builder.Entity<Printer>().HasAlternateKey(x => new { x.TenantId, x.Id });
+        builder.Entity<RetailProduct>().HasAlternateKey(x => new { x.TenantId, x.Id });
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

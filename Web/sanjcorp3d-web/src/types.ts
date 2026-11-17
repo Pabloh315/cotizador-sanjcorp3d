@@ -79,6 +79,8 @@ export type Report = {
   productDistribution: Array<{ name: string; quantity: number; revenue: number }>; lossDistribution: Array<{ name: string; grams: number }>
   lossTotalGrams: number; lossTotalCost: number
   lossDetails: Array<{ id: number; createdAtUtc: string; grams: number; reason: string; consumableName: string; material: string; color: string; estimatedCost: number }>
+  retailSaleCount: number; retailRevenue: number; retailProfit: number; retailSales: RetailSale[]
+  retailByCategory: Array<{ name: string; quantity: number; revenue: number; profit: number }>
 }
 
 export type SaleSummary = {
@@ -108,3 +110,6 @@ export type PrintOrder = {
   createdAtUtc: string; startedAtUtc?: string; estimatedFinishedAtUtc?: string; finishedAtUtc?: string; coolingUntilUtc?: string; completedAtUtc?: string
   printHours: number; quantity: number; recommendedPrice: number; consumables: PrintOrderConsumable[]
 }
+export type RetailProduct = { id: number; category: 'Printer' | 'Filament' | 'Resin'; brand: string; name: string; sku: string; materialType: string; colorName: string; colorHex: string; specifications: string; unitWeightGrams: number; unitCost: number; profitPercent: number; suggestedPrice: number; stockQuantity: number; active: boolean; createdAtUtc: string }
+export type RetailSale = { id: number; productId: number; category: string; productName: string; customer: string; quantity: number; unitCost: number; profitPercent: number; unitPrice: number; totalCost: number; totalPrice: number; profit: number; soldAtUtc: string }
+export type RetailColor = { name: string; hex: string; materialType: string; brand: string }

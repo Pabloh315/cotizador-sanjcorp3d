@@ -252,3 +252,56 @@ public sealed class ChatMessage : ITenantEntity
     public string? AttachmentContentType { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public sealed class RetailProduct : ITenantEntity, IActiveEntity
+{
+    public long Id { get; set; }
+    public Guid TenantId { get; set; }
+    public string Category { get; set; } = "Filamento";
+    public string Brand { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Sku { get; set; } = string.Empty;
+    public string MaterialType { get; set; } = string.Empty;
+    public string ColorName { get; set; } = string.Empty;
+    public string ColorHex { get; set; } = "#808080";
+    public string Specifications { get; set; } = string.Empty;
+    public decimal UnitWeightGrams { get; set; }
+    public decimal UnitCost { get; set; }
+    public decimal ProfitPercent { get; set; }
+    public int StockQuantity { get; set; }
+    public bool Active { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public List<RetailAcquisition> Acquisitions { get; set; } = [];
+    public List<RetailSale> Sales { get; set; } = [];
+}
+
+public sealed class RetailAcquisition : ITenantEntity
+{
+    public long Id { get; set; }
+    public Guid TenantId { get; set; }
+    public long ProductId { get; set; }
+    public RetailProduct Product { get; set; } = null!;
+    public int Quantity { get; set; }
+    public decimal UnitCost { get; set; }
+    public string Supplier { get; set; } = string.Empty;
+    public DateTime AcquiredAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class RetailSale : ITenantEntity
+{
+    public long Id { get; set; }
+    public Guid TenantId { get; set; }
+    public long ProductId { get; set; }
+    public RetailProduct Product { get; set; } = null!;
+    public string Category { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string Customer { get; set; } = string.Empty;
+    public int Quantity { get; set; }
+    public decimal UnitCost { get; set; }
+    public decimal ProfitPercent { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal TotalCost { get; set; }
+    public decimal TotalPrice { get; set; }
+    public decimal Profit { get; set; }
+    public DateTime SoldAtUtc { get; set; } = DateTime.UtcNow;
+}
