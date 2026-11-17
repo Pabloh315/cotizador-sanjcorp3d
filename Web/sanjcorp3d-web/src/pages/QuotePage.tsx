@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { ArrowLeft, ArrowRight, Calculator, CheckCircle2, Download, MapPin, Plus, RotateCcw, Save, Search, ShoppingBag, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import type { BusinessSettings, Consumable, ConsumableUsage, ExtraMaterial, MaterialUsage, Printer, ProductCatalog, QuoteCalculation, QuoteRequest, QuoteSummary } from '../types'
@@ -29,6 +29,11 @@ const buildProfitOptions = (total: number) => profitChoices.map(option => {
   const price = Number((total * option.multiplier).toFixed(2))
   return { ...option, price, profit: Number((price - total).toFixed(2)) }
 })
+function SearchMatch({ text, query }: { text: string; query: string }) {
+  const index = text.toLocaleLowerCase().indexOf(query.toLocaleLowerCase())
+  if (index < 0 || !query) return <>{text}</>
+  return <>{text.slice(0, index)}<mark>{text.slice(index, index + query.length)}</mark>{text.slice(index + query.length)}</>
+}
 const quoteWizardSteps = [
   { title: 'Proyecto', description: 'Cliente, pieza, impresora, tiempo y entrega.' },
   { title: 'Consumibles', description: 'Filamentos o resinas que se usaran en la impresion.' },
@@ -97,6 +102,8 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState<QuoteSummary[]>([])
   const [searching, setSearching] = useState(false)
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const [addressResults, setAddressResults] = useState<AddressResult[]>([])
   const [addressBusy, setAddressBusy] = useState(false)
   const [originPoint, setOriginPoint] = useState<OriginPoint>()
@@ -119,6 +126,23 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       .catch(reason => setError((reason as Error).message)).finally(() => setLoading(false))
     api.products().then(setProducts).catch(() => setProducts([]))
   }, [])
+  useEffect(() => {
+    if (!searchOpen) return
+    searchInputRef.current?.focus()
+    const term = searchText.trim()
+    setActiveSearchIndex(-1)
+    if (term.length < 2) { setSearchResults([]); setSearching(false); return }
+    let cancelled = false
+    setSearchResults([])
+    setSearching(true)
+    const timer = window.setTimeout(() => {
+      api.quotes({ search: term, take: 12 })
+        .then(items => { if (!cancelled) setSearchResults(items) })
+        .catch(reason => { if (!cancelled) setError((reason as Error).message) })
+        .finally(() => { if (!cancelled) setSearching(false) })
+    }, 250)
+    return () => { cancelled = true; window.clearTimeout(timer) }
+  }, [searchOpen, searchText])
   const consumableById = useMemo(() => new Map(consumables.map(x => [x.id, x])), [consumables])
   const materialById = useMemo(() => new Map(materials.map(x => [x.id, x])), [materials])
   const selectedPrinter = useMemo(() => printers.find(x => x.id === form.printerId), [printers, form.printerId])
@@ -280,11 +304,16 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     finally { setBusy(false) }
   }
 
-  async function searchExisting() {
-    setSearching(true); setError('')
-    try { setSearchResults(await api.quotes({ search: searchText })) }
-    catch (reason) { setError((reason as Error).message) }
-    finally { setSearching(false) }
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault(); setActiveSearchIndex(current => Math.min(current + 1, searchResults.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault(); setActiveSearchIndex(current => Math.max(current - 1, 0))
+    } else if (event.key === 'Enter' && searchResults.length > 0) {
+      event.preventDefault(); void loadExisting(searchResults[activeSearchIndex >= 0 ? activeSearchIndex : 0].id)
+    } else if (event.key === 'Escape') {
+      setSearchOpen(false)
+    }
   }
 
   async function loadExisting(id: number) {
@@ -318,10 +347,10 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   if (!canWrite) return <><PageHeader eyebrow="COTIZADOR" title="Nueva cotizacion" description="Clculo de costos y precio recomendado." /><div className="panel locked-panel"><h2>Acceso de consulta</h2><p>Tu rol puede revisar el historial, pero no crear cotizaciones. Solicita al administrador el rol Ventas si necesitas esta funcin.</p></div></>
 
   return <>
-    <PageHeader eyebrow="COTIZADOR 3D" title="Nueva cotizacion" description="Registra los datos de impresin, combina consumibles y obtn el precio con la frmula original." actions={<button className="secondary" onClick={() => { setSearchOpen(value => !value); if (!searchOpen && searchResults.length === 0) void searchExisting() }}><Search size={17} />Buscar cotizacion o venta</button>} />
+    <PageHeader eyebrow="COTIZADOR 3D" title="Nueva cotizacion" description="Registra los datos de impresin, combina consumibles y obtn el precio con la frmula original." actions={<button className="secondary" onClick={() => setSearchOpen(value => !value)}><Search size={17} />Buscar cotización o venta</button>} />
     <ErrorMessage error={error} /><SuccessMessage message={success} />
     {loadedFrom && <div className="revision-banner"><div><strong>Cotización base: {loadedFrom.orderCode}</strong><span>Estás preparando una nueva cotización. Al guardar se creará otro código y el registro original no será modificado.</span></div><button type="button" className="ghost" onClick={clear}>Cancelar y limpiar</button></div>}
-    {searchOpen && <section className="panel quote-search-panel"><div className="section-title"><div><p className="eyebrow">REUTILIZAR DATOS</p><h2>Buscar cotizaciones y ventas</h2></div><button className="icon ghost" onClick={() => setSearchOpen(false)}><X size={18} /></button></div><div className="inline-form"><label className="search-field"><Search size={17} /><input value={searchText} onChange={e => setSearchText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void searchExisting() } }} placeholder="Codigo, cliente o producto" /></label><button onClick={searchExisting} disabled={searching}>{searching ? 'Buscando' : 'Buscar'}</button></div>{searching ? <Loading label="Buscando" /> : searchResults.length === 0 ? <Empty>No se encontraron registros.</Empty> : <div className="line-list quote-search-results">{searchResults.map(item => <div className="line-item" key={item.id}><div><strong>{item.customer} - {item.productName || item.projectName}</strong><small>{item.orderCode} - {item.soldAtUtc ? 'Venta confirmada' : 'Cotizacion pendiente'} - {money(item.recommendedPrice, settings?.currencySymbol)}</small></div><button onClick={() => loadExisting(item.id)}>Cargar como nueva</button></div>)}</div>}</section>}
+    {searchOpen && <section className="panel quote-search-panel"><div className="section-title"><div><p className="eyebrow">BÚSQUEDA RÁPIDA</p><h2>Encuentra una cotización</h2></div><button className="icon ghost" onClick={() => setSearchOpen(false)} aria-label="Cerrar buscador"><X size={18} /></button></div><div className="google-quote-search"><Search className="google-search-icon" size={20} /><input ref={searchInputRef} value={searchText} onChange={event => setSearchText(event.target.value)} onKeyDown={handleSearchKeyDown} placeholder="Busca por código, cliente o proyecto" role="combobox" aria-expanded={searchResults.length > 0} aria-controls="quote-search-suggestions" aria-activedescendant={activeSearchIndex >= 0 ? `quote-suggestion-${searchResults[activeSearchIndex]?.id}` : undefined} autoComplete="off" />{searching ? <span className="searching-dot" aria-label="Buscando" /> : searchText && <button type="button" className="google-search-clear" onClick={() => { setSearchText(''); searchInputRef.current?.focus() }} aria-label="Limpiar búsqueda"><X size={17} /></button>}</div>{searchText.trim().length < 2 ? <p className="search-guidance">Escribe al menos dos caracteres. Puedes usar el código, el nombre del cliente o el proyecto.</p> : !searching && searchResults.length === 0 ? <Empty>No se encontraron cotizaciones con “{searchText.trim()}”.</Empty> : <div className="google-suggestions" id="quote-search-suggestions" role="listbox">{searchResults.map((item, index) => <button type="button" id={`quote-suggestion-${item.id}`} role="option" aria-selected={index === activeSearchIndex} className={index === activeSearchIndex ? 'active' : ''} key={item.id} onMouseEnter={() => setActiveSearchIndex(index)} onClick={() => void loadExisting(item.id)}><Search size={16} /><div><strong><SearchMatch text={item.orderCode} query={searchText.trim()} /></strong><span><SearchMatch text={item.customer} query={searchText.trim()} /> · <SearchMatch text={item.projectName} query={searchText.trim()} /></span><small>{item.soldAtUtc ? 'Venta confirmada' : 'Cotización pendiente'} · {money(item.recommendedPrice, settings?.currencySymbol)}</small></div><span className="suggestion-action">Cargar como nueva</span></button>)}</div>}</section>}
     {printers.length === 0 ? <div className="alert error">Registra al menos una impresora disponible antes de cotizar.</div> : null}
     {consumables.length === 0 ? <div className="alert error">Necesitas al menos un consumible activo antes de cotizar.</div> : null}
     <div className="quote-layout">

@@ -19,13 +19,15 @@ namespace SanjCorp3D.Api.Controllers;
 public sealed class QuotesController(AppDbContext db,BusinessSettingsService settings):ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult>List([FromQuery]string search="",[FromQuery]DateTime? from=null,[FromQuery]DateTime? to=null,CancellationToken ct=default)
+    public async Task<IActionResult>List([FromQuery]string search="",[FromQuery]DateTime? from=null,[FromQuery]DateTime? to=null,[FromQuery]int? take=null,CancellationToken ct=default)
     {
         var q=db.Quotes.AsNoTracking().Include(x=>x.Sale).AsQueryable();
         search=search.Trim();if(search.Length>0)q=q.Where(x=>EF.Functions.ILike(x.OrderCode,$"%{search}%")||EF.Functions.ILike(x.Customer,$"%{search}%")||EF.Functions.ILike(x.ProjectName,$"%{search}%"));
         if(from.HasValue)q=q.Where(x=>x.CreatedAtUtc>=DateTime.SpecifyKind(from.Value.Date,DateTimeKind.Utc));
         if(to.HasValue)q=q.Where(x=>x.CreatedAtUtc<DateTime.SpecifyKind(to.Value.Date.AddDays(1),DateTimeKind.Utc));
-        var rows=await q.OrderByDescending(x=>x.CreatedAtUtc).Select(x=>new{x.Id,x.OrderCode,x.CreatedAtUtc,x.Customer,x.ProjectName,x.PrinterName,x.TotalWeight,CostTotal=x.Subtotal,x.RecommendedPrice,SoldAtUtc=x.Sale==null?(DateTime?)null:x.Sale.SoldAtUtc}).ToListAsync(ct);
+        q=q.OrderByDescending(x=>x.CreatedAtUtc);
+        if(take.HasValue)q=q.Take(Math.Clamp(take.Value,1,50));
+        var rows=await q.Select(x=>new{x.Id,x.OrderCode,x.CreatedAtUtc,x.Customer,x.ProjectName,x.PrinterName,x.TotalWeight,CostTotal=x.Subtotal,x.RecommendedPrice,SoldAtUtc=x.Sale==null?(DateTime?)null:x.Sale.SoldAtUtc}).ToListAsync(ct);
         return Ok(rows);
     }
 

@@ -117,7 +117,7 @@ export const api = {
   updateQuotePrice: (id: number, price: number) => request<{ id: number; recommendedPrice: number; profitAmount: number }>(`/api/quotes/${id}/price`, { method: 'PATCH', body: JSON.stringify({ price }) }),
   copyQuote: (id: number) => request<QuoteSummary>(`/api/quotes/${id}/copy`, { method: 'POST' }),
   downloadVoucher: (id: number) => download(`/api/quotes/${id}/voucher`, `cotización-${id}.pdf`),
-  quotes: (filters: { search?: string; from?: string; to?: string } = {}) => request<QuoteSummary[]>(`/api/quotes${query(filters)}`),
+  quotes: (filters: { search?: string; from?: string; to?: string; take?: number } = {}) => request<QuoteSummary[]>(`/api/quotes${query(filters)}`),
   quote: (id: number) => request<QuoteDetail>(`/api/quotes/${id}`),
   confirmSale: (id: number) => request<{ id: number; quoteId: number; soldAtUtc: string; saleAmount: number }>(`/api/quotes/${id}/sale`, { method: 'POST' }),
   deleteQuote: (id: number) => request<void>(`/api/quotes/${id}`, { method: 'DELETE' }),
