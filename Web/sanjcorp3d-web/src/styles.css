@@ -214,6 +214,10 @@ tr.clickable { cursor: pointer; }
 .price-hero small { color: #a4bdb4; }
 .price-hero strong { margin: .2rem 0; color: var(--mint); font-size: 2rem; letter-spacing: -.04em; }
 .price-hero span { color: #8aa097; font-size: .72rem; }
+.reset-calculated-price { margin-top: .7rem; justify-content: center; }
+.revision-banner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: .85rem 1rem; color: #dcece7; background: #10291f; border: 1px solid #2f594b; border-left: 3px solid var(--mint); border-radius: 8px; }
+.revision-banner > div { display: grid; gap: .2rem; }
+.revision-banner span { color: var(--muted); font-size: .75rem; line-height: 1.45; }
 .breakdown { margin: 0; display: grid; }
 .breakdown > div { display: flex; justify-content: space-between; gap: 1rem; padding: .5rem 0; color: #aebfba; border-bottom: 1px solid var(--line-soft); font-size: .76rem; }
 .breakdown dt, .breakdown dd { margin: 0; }
