@@ -1,5 +1,5 @@
 ﻿import { FormEvent, useEffect, useRef, useState } from 'react'
-import { FileText, ImagePlus, MessageCircle, Paperclip, Send } from 'lucide-react'
+import { FileText, MessageCircle, Paperclip, Send } from 'lucide-react'
 import { api } from '../api'
 import type { ChatMessage, Profile, SupportConversation } from '../types'
 import { ErrorMessage, Loading, PageHeader } from '../ui'

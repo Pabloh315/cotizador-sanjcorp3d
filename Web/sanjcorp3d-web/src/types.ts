@@ -50,9 +50,10 @@ export type QuoteRequest = {
 }
 
 export type QuoteCalculation = {
-  totalWeight: number; materialCost: number; electricityCost: number; maintenanceCost: number
+  totalWeight: number; materialCost: number; energyConsumptionKwh: number; electricityCost: number; maintenanceCost: number
   preparationCost: number; laborCost: number; wasteCost: number; overheadCost: number; packagingCost: number; transportCost: number
   additionalCost: number; subtotal: number; profitAmount: number; taxAmount: number; recommendedPrice: number
+  profitOptions: Array<{ percentage: number; multiplier: number; price: number; profit: number }>
 }
 
 export type QuoteSummary = {

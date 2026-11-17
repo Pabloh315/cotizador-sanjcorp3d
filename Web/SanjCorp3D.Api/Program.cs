@@ -89,7 +89,10 @@ app.UseCors("Frontend");
 app.UseAuthentication();
 app.Use(async (context, next) =>
 {
-    if (context.User.IsInRole(AppRoles.SuperAdmin) && !context.Request.Path.StartsWithSegments("/api/tenants") && !context.Request.Path.StartsWithSegments("/api/auth"))
+    if (context.User.IsInRole(AppRoles.SuperAdmin) &&
+        !context.Request.Path.StartsWithSegments("/api/tenants") &&
+        !context.Request.Path.StartsWithSegments("/api/auth") &&
+        !context.Request.Path.StartsWithSegments("/api/chat"))
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         await context.Response.WriteAsJsonAsync(new { message = "El administrador de plataforma no puede acceder a datos de empresas." });

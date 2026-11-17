@@ -28,6 +28,8 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
         var isSuperAdmin = user.IsSupremeAdmin || roles.Contains(AppRoles.SuperAdmin);
         var tenant = isSuperAdmin ? null : await ResolveTenant(user, false);
         if (!isSuperAdmin && (tenant is null || !tenant.Active)) return Unauthorized(new { message = "La cuenta pertenece a una empresa inactiva." });
+        if (!MatchesWorkspace(request.Workspace, isSuperAdmin, tenant))
+            return Unauthorized(new { message = "Las credenciales no corresponden al espacio seleccionado." });
         var result = await signIn.PasswordSignInAsync(user, request.Password, request.RememberMe, lockoutOnFailure: true);
         if (result.RequiresTwoFactor)
         {
@@ -79,7 +81,7 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
         if (user is null || !user.Active) return Unauthorized();
         var code = request.Code.Replace(" ", "").Replace("-", "");
         if (!await users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, code))
-            return BadRequest(new { message = "El cÃ³digo de autenticaciÃ³n no es vÃ¡lido." });
+            return BadRequest(new { message = "El código de autenticación no es válido." });
         await users.SetTwoFactorEnabledAsync(user, true);
         var recoveryCodes = await users.GenerateNewTwoFactorRecoveryCodesAsync(user, 8);
         return Ok(new { enabled = true, recoveryCodes });
@@ -119,5 +121,15 @@ public sealed class AuthController(UserManager<ApplicationUser> users, SignInMan
         if (isSuperAdmin && selected.HasValue)
             return await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == selected.Value);
         return await db.Tenants.IgnoreQueryFilters().FirstOrDefaultAsync(x => x.Id == (user.TenantId ?? TenantContext.TechnologyTenantId));
+    }
+
+    private static bool MatchesWorkspace(string? workspace, bool isSuperAdmin, Tenant? tenant)
+    {
+        var selected = workspace?.Trim().ToLowerInvariant();
+        if (selected is not "technology" and not "makers") return false;
+        if (isSuperAdmin) return selected == "technology";
+        return selected == "makers"
+            ? string.Equals(tenant?.Kind, "maker", StringComparison.OrdinalIgnoreCase)
+            : string.Equals(tenant?.Kind, "technology", StringComparison.OrdinalIgnoreCase);
     }
 }

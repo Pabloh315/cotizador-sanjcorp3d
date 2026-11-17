@@ -33,12 +33,10 @@ public static class QuoteCalculator
         // The API keeps the public value in hours for compatibility, so convert
         // it back to minutes before applying the energy formula.
         decimal printMinutes = decimal.Round(request.PrintHours * 60m, 0, MidpointRounding.AwayFromZero);
-        decimal energyKwh = printer.PowerWatts / 1000m * (printMinutes / 60m);
-        decimal electricity = energyKwh * settings.ElectricityPerKwh * pieces;
+        decimal energyKwh = printer.PowerWatts / 1000m * (printMinutes / 60m) * pieces;
+        decimal electricity = energyKwh * settings.ElectricityPerKwh;
         decimal directMaterials = materials.Sum(x => x.Cost) + request.AdditionalManualCost;
-        // Production is priced from its direct replacement cost. Administrative
-        // expenses, salaries and failures are covered by the x3 multiplier.
-        decimal maintenance = Math.Clamp(settings.MaintenancePerPrint, 1m, 3m);
+        decimal maintenance = Math.Max(0m, settings.MaintenancePerPrint) * pieces;
         decimal preparation = 0m;
         decimal labor = 0m;
         decimal waste = 0m;
@@ -47,13 +45,19 @@ public static class QuoteCalculator
         decimal transport = Math.Max(0, request.TransportCost ?? settings.TransportCost);
         decimal additional = directMaterials + packaging + transport;
 
-        decimal productionCost = material + electricity + directMaterials + maintenance;
-        decimal subtotal = productionCost + packaging + transport;
-        decimal multipliedTotal = productionCost * request.ProfitMultiplier;
-        decimal recommended = decimal.Ceiling(multipliedTotal + packaging + transport);
-        decimal profit = recommended - subtotal;
+        decimal subtotal = material + electricity + directMaterials + maintenance + packaging + transport;
         decimal tax = 0m;
         decimal Round(decimal value) => decimal.Round(value, settings.DecimalPlaces, MidpointRounding.AwayFromZero);
-        return new(Round(weight), Round(material), Round(electricity), Round(maintenance), Round(preparation), Round(labor), Round(waste), Round(overhead), Round(packaging), Round(transport), Round(additional), Round(subtotal), Round(profit), Round(tax), Round(recommended));
+        var profitOptions = new[] { 50, 100, 150, 200, 250, 300 }
+            .Select(percentage =>
+            {
+                var multiplier = 1m + percentage / 100m;
+                var price = Round(subtotal * multiplier);
+                return new ProfitOptionDto(percentage, multiplier, price, Round(price - subtotal));
+            })
+            .ToList();
+        decimal recommended = Round(subtotal * request.ProfitMultiplier);
+        decimal profit = Round(recommended - subtotal);
+        return new(Round(weight), Round(material), Round(energyKwh), Round(electricity), Round(maintenance), Round(preparation), Round(labor), Round(waste), Round(overhead), Round(packaging), Round(transport), Round(additional), Round(subtotal), profit, Round(tax), recommended, profitOptions);
     }
 }

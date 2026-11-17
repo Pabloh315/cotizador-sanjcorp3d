@@ -126,13 +126,8 @@ public static class IdentitySeeder
             user.TenantId = seed.IsSupreme ? null : technologyId;
             user.IsSupremeAdmin = seed.IsSupreme;
             await users.UpdateAsync(user);
-            if (!string.IsNullOrWhiteSpace(seed.Password))
-            {
-                if (await users.HasPasswordAsync(user)) await users.RemovePasswordAsync(user);
-                var passwordResult = await users.AddPasswordAsync(user, seed.Password);
-                if (!passwordResult.Succeeded)
-                    throw new InvalidOperationException(string.Join("; ", passwordResult.Errors.Select(error => error.Description)));
-            }
+            // Seed credentials bootstrap a missing account only. Reapplying them
+            // here would silently undo a password rotation on every application start.
         }
 
         var currentRoles = await users.GetRolesAsync(user);

@@ -7,14 +7,14 @@ namespace SanjCorp3D.Api.Tests;
 public sealed class QuoteCalculatorTests
 {
     [Fact]
-    public void Calculates_direct_cost_times_three_and_rounds_up()
+    public void Calculates_total_cost_with_selected_profit_and_profit_table()
     {
         var printer = Printer(powerWatts: 500m);
         var consumable = Consumable("Filamento", 200m, 1.24m);
         var material = new ExtraMaterial { Id = 1, Name = "Iman", Category = "Herraje", Unit = "unidad", UnitPrice = 3m };
         var request = new QuoteRequest("Cliente", "Proyecto", 1, 2m, 3, 5m, 1.5m, "",
             [new ConsumableUsageRequest(1, 100m)], [new MaterialUsageRequest(1, 2m)]);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.2m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.3m, 10m, .1m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.2m, 2m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.3m, 10m, .1m, 2, "", "", "");
 
         var result = QuoteCalculator.Calculate(request, printer,
             [new QuoteCalculator.ConsumableLine(consumable, 100m)],
@@ -23,12 +23,14 @@ public sealed class QuoteCalculatorTests
         Assert.Equal(300m, result.TotalWeight);
         Assert.Equal(60m, result.MaterialCost);
         Assert.Equal(3.6m, result.ElectricityCost);
-        Assert.Equal(2m, result.MaintenanceCost);
+        Assert.Equal(6m, result.MaintenanceCost);
         Assert.Equal(11m, result.AdditionalCost);
-        Assert.Equal(76.6m, result.Subtotal);
-        Assert.Equal(153.4m, result.ProfitAmount);
+        Assert.Equal(80.6m, result.Subtotal);
+        Assert.Equal(40.3m, result.ProfitAmount);
         Assert.Equal(0m, result.TaxAmount);
-        Assert.Equal(230m, result.RecommendedPrice);
+        Assert.Equal(120.9m, result.RecommendedPrice);
+        Assert.Equal(120.9m, result.ProfitOptions.Single(x => x.Percentage == 50).Price);
+        Assert.Equal(322.4m, result.ProfitOptions.Single(x => x.Percentage == 300).Price);
     }
 
     [Fact]
@@ -37,14 +39,14 @@ public sealed class QuoteCalculatorTests
         var request = new QuoteRequest("Cliente", "Figura", 1, 1m, 2, 0m, 1.25m, "",
             [new ConsumableUsageRequest(1, 120m)], []);
         var resin = Consumable("Resina", 300m, 1.2m);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.25m, 0m, .01m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.25m, 0m, .01m, 2, "", "", "");
 
         var result = QuoteCalculator.Calculate(request, Printer(0m),
             [new QuoteCalculator.ConsumableLine(resin, 120m)], [], settings);
 
         Assert.Equal(240m, result.TotalWeight);
         Assert.Equal(60m, result.MaterialCost);
-        Assert.Equal(183m, result.RecommendedPrice);
+        Assert.Equal(75m, result.RecommendedPrice);
     }
 
     [Fact]
@@ -54,16 +56,17 @@ public sealed class QuoteCalculatorTests
         // 1.10 Bs/kWh, 900 g at 155 Bs/kg, no maintenance and +50%.
         var request = new QuoteRequest("Cliente", "Pieza", 1, 23m + 20m / 60m, 1, 0m, 1.5m, "",
             [new ConsumableUsageRequest(1, 900m)], []);
-        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.10m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.3m, 0m, 0m, 2);
+        var settings = new BusinessSettingsDto("SANJ", "Bolivianos", "Bs", 1.10m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 0m, 1.3m, 0m, 0m, 2, "", "", "");
 
         var result = QuoteCalculator.Calculate(request, Printer(400m),
             [new QuoteCalculator.ConsumableLine(Consumable("Filamento", 155m, 1.24m), 900m)], [], settings);
 
         Assert.Equal(139.50m, result.MaterialCost);
+        Assert.Equal(9.33m, result.EnergyConsumptionKwh);
         Assert.Equal(10.27m, result.ElectricityCost);
         Assert.Equal(150.77m, result.Subtotal);
-        Assert.Equal(302.23m, result.ProfitAmount);
-        Assert.Equal(453m, result.RecommendedPrice);
+        Assert.Equal(75.39m, result.ProfitAmount);
+        Assert.Equal(226.16m, result.RecommendedPrice);
     }
 
     [Fact]

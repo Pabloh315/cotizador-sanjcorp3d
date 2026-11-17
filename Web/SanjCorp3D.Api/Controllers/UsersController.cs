@@ -13,7 +13,7 @@ namespace SanjCorp3D.Api.Controllers;
 public sealed class UsersController(UserManager<ApplicationUser> users, TenantContext tenantContext) : ControllerBase
 {
     public sealed record ResetPasswordRequest(string Password);
-    private static readonly string[] AssignableRoles = [AppRoles.Sales, AppRoles.Inventory, AppRoles.Viewer];
+    private static readonly string[] AssignableRoles = [AppRoles.Sales, AppRoles.Inventory, AppRoles.Production, AppRoles.Viewer];
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)

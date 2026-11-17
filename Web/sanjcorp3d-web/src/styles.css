@@ -219,6 +219,18 @@ tr.clickable { cursor: pointer; }
 .breakdown dt, .breakdown dd { margin: 0; }
 .breakdown dd { color: #e2ece8; font-weight: 650; text-align: right; }
 .breakdown .subtotal { margin-top: .25rem; color: white; border-color: #3e554e; font-weight: 750; }
+.calculation-table-wrap { margin: 1rem 0; overflow-x: auto; border: 1px solid var(--line-soft); border-radius: 8px; }
+.calculation-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
+.calculation-table th, .calculation-table td { padding: .55rem .65rem; text-align: right; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+.calculation-table th:first-child, .calculation-table td:first-child { text-align: left; }
+.calculation-table th { color: var(--muted); background: #0a1512; }
+.calculation-table tr:last-child td { border-bottom: 0; }
+.profit-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin-top: 1rem; }
+.profit-options button { min-width: 0; display: grid; gap: .12rem; padding: .65rem; text-align: left; }
+.profit-options button span { font-size: .66rem; opacity: .8; }
+.profit-options button strong { font-size: .84rem; }
+.profit-options button small { overflow: hidden; font-size: .58rem; text-overflow: ellipsis; white-space: nowrap; opacity: .72; }
+.profit-options button.active { color: #03110d; background: var(--mint); border-color: var(--mint); }
 .saved-ticket { display: flex; align-items: center; gap: .6rem; margin-top: 1rem; padding: .75rem; color: var(--mint); border: 1px solid #2f594b; border-radius: 8px; }
 .saved-ticket > div { flex: 1; display: grid; }
 .saved-ticket small { color: var(--muted); font-size: .62rem; }

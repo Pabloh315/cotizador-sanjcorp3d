@@ -16,6 +16,19 @@ const mapZoom = 14
 const tileSize = 256
 const defaultMapCenter = { lat: -17.7833, lng: -63.1821 }
 const deliveryCostPerKm = 3.20
+const profitChoices = [
+  { percentage: 50, multiplier: 1.5 },
+  { percentage: 100, multiplier: 2 },
+  { percentage: 150, multiplier: 2.5 },
+  { percentage: 200, multiplier: 3 },
+  { percentage: 250, multiplier: 3.5 },
+  { percentage: 300, multiplier: 4 },
+] as const
+const supportedMultiplier = (value: number | undefined) => profitChoices.some(option => option.multiplier === value) ? value! : 3
+const buildProfitOptions = (total: number) => profitChoices.map(option => {
+  const price = Number((total * option.multiplier).toFixed(2))
+  return { ...option, price, profit: Number((price - total).toFixed(2)) }
+})
 const quoteWizardSteps = [
   { title: 'Proyecto', description: 'Cliente, pieza, impresora, tiempo y entrega.' },
   { title: 'Consumibles', description: 'Filamentos o resinas que se usaran en la impresion.' },
@@ -83,7 +96,6 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const [searchText, setSearchText] = useState('')
   const [searchResults, setSearchResults] = useState<QuoteSummary[]>([])
   const [searching, setSearching] = useState(false)
-  const [newProfitCostName, setNewProfitCostName] = useState('')
   const [addressResults, setAddressResults] = useState<AddressResult[]>([])
   const [addressBusy, setAddressBusy] = useState(false)
   const [originPoint, setOriginPoint] = useState<OriginPoint>()
@@ -98,7 +110,8 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       .then(([printerItems, consumableItems, materialItems, configuration]) => {
         const availablePrinters = printerItems.filter(x => x.active)
         setPrinters(availablePrinters); setConsumables(consumableItems); setMaterials(materialItems); setSettings(configuration)
-        setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: Math.max(1, configuration.defaultProfitMultiplier || 3), maintenancePercent: configuration.maintenancePercent, preparationPercent: configuration.preparationPercent, laborPercent: configuration.laborPercent, wastePercent: configuration.wastePercent, overheadPercent: configuration.overheadPercent, packagingCost: configuration.packagingCost, transportCost: 0 }))
+        const configuredMultiplier = supportedMultiplier(configuration.defaultProfitMultiplier)
+        setForm(current => ({ ...current, printerId: availablePrinters[0]?.id ?? 0, profitMultiplier: configuredMultiplier, maintenancePercent: configuration.maintenancePercent, preparationPercent: configuration.preparationPercent, laborPercent: configuration.laborPercent, wastePercent: configuration.wastePercent, overheadPercent: configuration.overheadPercent, packagingCost: configuration.packagingCost, transportCost: 0 }))
         setSelectedConsumable(consumableItems.find(x => x.isDefault)?.id ?? consumableItems[0]?.id ?? 0)
         setSelectedMaterial(materialItems[0]?.id ?? 0)
       })
@@ -111,7 +124,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   const mapData = useMemo(() => mapTiles(form.latitude || defaultMapCenter.lat, form.longitude || defaultMapCenter.lng, 640, 260), [form.latitude, form.longitude])
   const wizardProgress = ((wizardStep + 1) / quoteWizardSteps.length) * 100
 
-  function invalidate() { setCalculation(undefined); setSaved(undefined); setSold(false); setSuccess('') }
+  function invalidate() { setCalculation(undefined); setCustomPrice(0); setSaved(undefined); setSold(false); setSuccess('') }
   function update<K extends keyof BaseForm>(key: K, value: BaseForm[K]) { setForm(current => ({ ...current, [key]: value })); invalidate() }
   function updateLocation(latitude: number, longitude: number, address = form.address) { setForm(current => ({ ...current, latitude, longitude, address })); setRouteInfo(undefined); invalidate() }
   function addConsumable() {
@@ -141,7 +154,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     finally { setAddressBusy(false) }
   }
 
-  function useCurrentLocationForRoute() {
+  function requestCurrentLocationForRoute() {
     if (!navigator.geolocation) { setError('Tu navegador no permite obtener ubicacion.'); return }
     setRouteBusy(true); setError('')
     navigator.geolocation.getCurrentPosition(
@@ -156,7 +169,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   }
 
   async function calculateRoute(origin = originPoint) {
-    if (!origin) { useCurrentLocationForRoute(); return }
+    if (!origin) { requestCurrentLocationForRoute(); return }
     setRouteBusy(true); setError('')
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${origin.longitude},${origin.latitude};${form.longitude},${form.latitude}?overview=false&alternatives=false&steps=false`
@@ -223,6 +236,11 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
     finally { setBusy(false) }
   }
 
+  function selectProfitOption(multiplier: number, price: number) {
+    setForm(current => ({ ...current, profitMultiplier: multiplier }))
+    setCustomPrice(price)
+  }
+
   async function save() {
     if (!form.customerPhone.trim()) { setError('Escribe el celular del cliente antes de guardar.'); return }
     setBusy(true); setError(''); setSuccess('')
@@ -257,11 +275,11 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       const source = await api.quote(id)
       const totalMinutes = Math.round(source.printHours * 60)
       const printer = printers.find(item => item.name === source.printerName)
-      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, address: '', latitude: defaultMapCenter.lat, longitude: defaultMapCenter.lng, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0, profitMultiplier: Math.max(1, source.profitMultiplier), notes: source.notes })
+      setForm({ customer: source.customer, customerPhone: source.customerPhone ?? '', projectName: source.projectName, address: '', latitude: defaultMapCenter.lat, longitude: defaultMapCenter.lng, printerId: printer?.id ?? printers[0]?.id ?? 0, hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60, quantity: source.quantity, additionalManualCost: 0, workExtraPercent: 0, maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0, profitMultiplier: supportedMultiplier(source.profitMultiplier), notes: source.notes })
       setSelectedProduct(source.productName ?? '')
       setConsumableLines(source.consumables.filter(line => consumableById.has(line.legacyConsumableId)).map(line => ({ consumableId: line.legacyConsumableId, grams: line.grams })))
       setMaterialLines(source.materials.filter(line => materialById.has(line.legacyMaterialId)).map(line => ({ materialId: line.legacyMaterialId, quantity: line.quantity })))
-      setCalculation({ totalWeight: source.totalWeight, materialCost: source.materialCost, electricityCost: source.electricityCost, maintenanceCost: source.maintenanceCost, preparationCost: 0, laborCost: source.laborCost, wasteCost: 0, overheadCost: source.functionalSurcharge, packagingCost: 0, transportCost: 0, additionalCost: source.additionalCost, subtotal: source.subtotal, profitAmount: source.profitAmount, taxAmount: source.taxAmount, recommendedPrice: source.recommendedPrice })
+      setCalculation({ totalWeight: source.totalWeight, materialCost: source.materialCost, energyConsumptionKwh: (printer?.powerWatts ?? 0) / 1000 * source.printHours * source.quantity, electricityCost: source.electricityCost, maintenanceCost: source.maintenanceCost, preparationCost: 0, laborCost: source.laborCost, wasteCost: 0, overheadCost: source.functionalSurcharge, packagingCost: 0, transportCost: 0, additionalCost: source.additionalCost, subtotal: source.subtotal, profitAmount: source.profitAmount, taxAmount: source.taxAmount, recommendedPrice: source.recommendedPrice, profitOptions: buildProfitOptions(source.subtotal) })
       setCustomPrice(source.recommendedPrice); setSaved(undefined); setSold(false); setSearchOpen(false)
       setWizardStep(0)
       setSuccess(`Datos de ${source.orderCode} cargados como una nueva cotizacion. Puedes modificarlos antes de guardar.`)
@@ -270,7 +288,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
   }
 
   function clear() {
-    setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: Math.max(1, settings?.defaultProfitMultiplier ?? 3), maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0 })
+    setForm({ ...emptyForm, printerId: printers[0]?.id ?? 0, profitMultiplier: supportedMultiplier(settings?.defaultProfitMultiplier), maintenancePercent: settings?.maintenancePercent ?? 6, preparationPercent: settings?.preparationPercent ?? 10, laborPercent: settings?.laborPercent ?? 20, wastePercent: settings?.wastePercent ?? 7, overheadPercent: settings?.overheadPercent ?? 5, packagingCost: settings?.packagingCost ?? 0, transportCost: 0 })
     setConsumableLines([]); setMaterialLines([]); setCalculation(undefined); setSaved(undefined); setSold(false); setSelectedProduct(''); setCustomPrice(0); setError(''); setSuccess('')
     setWizardStep(0)
   }
@@ -325,7 +343,7 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
               <span className="map-hint">Manten clic y arrastra el mapa para panear; suelta para fijar</span>
             </div>
             <div className="route-tools">
-              <button type="button" className="secondary" disabled={routeBusy} onClick={useCurrentLocationForRoute}>Usar mi ubicacion y calcular ruta</button>
+              <button type="button" className="secondary" disabled={routeBusy} onClick={requestCurrentLocationForRoute}>Usar mi ubicacion y calcular ruta</button>
               <button type="button" className="ghost" disabled={routeBusy || !originPoint} onClick={() => void calculateRoute()}>{routeBusy ? 'Calculando' : 'Recalcular ruta'}</button>
             </div>
             {routeInfo && <div className="route-summary"><div><span>Recorrido</span><strong>{routeInfo.kilometers.toFixed(2)} km</strong></div><div><span>Tiempo estimado</span><strong>{routeInfo.durationMinutes} min</strong></div><div><span>Transporte</span><strong>{money(routeInfo.cost, settings?.currencySymbol)}</strong></div><small>{deliveryCostPerKm.toFixed(2)} Bs por kilometro recorrido</small></div>}
@@ -361,11 +379,11 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
         {wizardStep === 3 && <section className="panel">
           <div className="section-title"><div><span className="step">04</span><h2>Precio final</h2></div></div>
           <div className="form-grid two compact-fields">
-            <label>Multiplicador de precio<input type="number" min="1" step="0.01" value={form.profitMultiplier} onChange={e => update('profitMultiplier', Math.max(1, Number(e.target.value)))} /></label>
+            <label>Ganancia deseada<select value={form.profitMultiplier} onChange={e => update('profitMultiplier', Number(e.target.value))}>{profitChoices.map(option => <option key={option.percentage} value={option.multiplier}>+{option.percentage}% (x{option.multiplier})</option>)}</select></label>
             <label>Transporte opcional<input type="number" min="0" step="0.01" value={form.transportCost} onChange={e => update('transportCost', Number(e.target.value))} /></label>
             <label>Empaque por pieza<input type="number" min="0" step="0.01" value={form.packagingCost} onChange={e => update('packagingCost', Number(e.target.value))} /></label>
           </div>
-          <div className="formula-note"><strong>Multiplicador actual: x{form.profitMultiplier || 3}</strong><span>El costo de produccion se multiplica por este valor. El transporte y empaque se agregan al final.</span></div>
+          <div className="formula-note"><strong>Ganancia seleccionada: +{Math.round(((form.profitMultiplier || 3) - 1) * 100)}%</strong><span>Costo total = material + energía + mantenimiento + materiales adicionales + empaque + transporte. El precio final multiplica todo el costo por el porcentaje elegido.</span></div>
         </section>}
 
         <div className="wizard-actions">
@@ -380,8 +398,10 @@ export function QuotePage({ canWrite }: { canWrite: boolean }) {
       <aside className="quote-summary panel">
         <p className="eyebrow">RESULTADO</p><h2>Precio recomendado</h2>
         {!calculation ? <div className="summary-placeholder"><Calculator size={34} /><p>Completa los datos y calcula para ver el precio final.</p></div> : <>
-          <div className="price-hero"><small>Total sugerido</small><strong>{money(customPrice > 0 ? customPrice : calculation.recommendedPrice, settings?.currencySymbol)}</strong><span>Multiplicador aplicado: x{form.profitMultiplier || 3}</span><label>Editar precio final<input type="number" min="0.01" step="0.01" value={customPrice || calculation.recommendedPrice} onChange={e => setCustomPrice(Math.max(0, Number(e.target.value)))} /></label></div>
-          {calculation.transportCost > 0 && <dl className="breakdown"><div><dt>Transporte</dt><dd>{money(calculation.transportCost, settings?.currencySymbol)}</dd></div></dl>}
+          <div className="price-hero"><small>Total sugerido</small><strong>{money(customPrice > 0 ? customPrice : calculation.recommendedPrice, settings?.currencySymbol)}</strong><span>Ganancia aplicada: +{Math.round(((form.profitMultiplier || 3) - 1) * 100)}% (x{form.profitMultiplier || 3})</span><label>Editar precio final<input type="number" min="0.01" step="0.01" value={customPrice || calculation.recommendedPrice} onChange={e => setCustomPrice(Math.max(0, Number(e.target.value)))} /></label></div>
+          <div className="calculation-table-wrap"><table className="calculation-table"><thead><tr><th>Material</th><th>Gramos</th><th>Costo/g</th><th>Costo</th></tr></thead><tbody>{consumableLines.map((line, index) => { const item = consumableById.get(line.consumableId); const costPerGram = item ? (item.category.toLowerCase() === 'resina' ? item.pricePerUnit / Math.max(item.density, 0.0001) / 1000 : item.pricePerUnit / 1000) : 0; return <tr key={`${line.consumableId}-calculation-${index}`}><td>{item ? `${item.name} - ${item.color}` : `Material ${index + 1}`}</td><td>{number(line.grams * form.quantity)} g</td><td>{money(costPerGram, settings?.currencySymbol)}</td><td>{money(costPerGram * line.grams * form.quantity, settings?.currencySymbol)}</td></tr> })}</tbody></table></div>
+          <dl className="breakdown"><div><dt>Tiempo de impresión</dt><dd>{number(form.hours + form.minutes / 60)} hrs</dd></div><div><dt>Potencia de impresora</dt><dd>{number(selectedPrinter?.powerWatts ?? 0)} W</dd></div><div><dt>Consumo de energía</dt><dd>{number(calculation.energyConsumptionKwh)} kWh</dd></div><div><dt>Costo de energía por kWh</dt><dd>{money(settings?.electricityPerKwh ?? 0, settings?.currencySymbol)}</dd></div><div><dt>Costo material</dt><dd>{money(calculation.materialCost, settings?.currencySymbol)}</dd></div><div><dt>Costo energía</dt><dd>{money(calculation.electricityCost, settings?.currencySymbol)}</dd></div><div><dt>Mantenimiento</dt><dd>{money(calculation.maintenanceCost, settings?.currencySymbol)}</dd></div>{calculation.additionalCost > 0 && <div><dt>Materiales y costos adicionales</dt><dd>{money(calculation.additionalCost, settings?.currencySymbol)}</dd></div>}<div className="subtotal"><dt>Costo total</dt><dd>{money(calculation.subtotal, settings?.currencySymbol)}</dd></div></dl>
+          <div className="profit-options" aria-label="Opciones de ganancia">{calculation.profitOptions.map(option => <button type="button" className={form.profitMultiplier === option.multiplier ? 'active' : 'ghost'} key={option.percentage} onClick={() => selectProfitOption(option.multiplier, option.price)}><span>+{option.percentage}%</span><strong>{money(option.price, settings?.currencySymbol)}</strong><small>Ganancia: {money(option.profit, settings?.currencySymbol)}</small></button>)}</div>
         </>}
         {saved && <div className="saved-ticket"><CheckCircle2 size={19} /><div><small>Codigo guardado</small><strong>{saved.orderCode}</strong></div><StatusSale sold={sold} /><button className="icon ghost" title="Descargar comprobante PDF" onClick={() => api.downloadVoucher(saved.id).catch(reason => setError((reason as Error).message))}><Download size={16} /></button></div>}
         <div className="summary-actions">

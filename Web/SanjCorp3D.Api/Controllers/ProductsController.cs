@@ -173,8 +173,8 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
         var products = new List<(ProductCatalog Product, int Quantity, string MaterialType, string MaterialLabel, decimal PricePerKg, Consumable? Consumable)>();
         foreach (var line in request.Lines)
         {
-            if (!catalog.TryGetValue(line.ProductId, out var product)) throw new ArgumentException("Uno de los productos seleccionados no existe o est archivado.");
-            if (product.ProductionMinutes <= 0) throw new ArgumentException($"Configura el tiempo de produccin de {product.Name} antes de cotizarlo.");
+            if (!catalog.TryGetValue(line.ProductId, out var product)) throw new ArgumentException("Uno de los productos seleccionados no existe o está archivado.");
+            if (product.ProductionMinutes <= 0) throw new ArgumentException($"Configura el tiempo de producción de {product.Name} antes de cotizarlo.");
             var materialType = string.IsNullOrWhiteSpace(line.MaterialType) ? product.MaterialType : line.MaterialType.Trim();
             var materialLabel = materialType;
             var pricePerKg = 0m;
@@ -228,10 +228,10 @@ public sealed class ProductsController(AppDbContext db, BusinessSettingsService 
     {
         name = request.Name?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(name)) return BadRequest(new { message = "El nombre del producto es obligatorio." });
-        if (request.MaterialCost < 0) return BadRequest(new { message = "El costo de produccin no puede ser negativo." });
+        if (request.MaterialCost < 0) return BadRequest(new { message = "El costo de producción no puede ser negativo." });
         if (request.AdditionalMaterialCost < 0) return BadRequest(new { message = "El costo de materiales extra no puede ser negativo." });
         if (request.FilamentGrams < 0) return BadRequest(new { message = "Los gramos de filamento no pueden ser negativos." });
-        if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de produccin no puede ser negativo." });
+        if (request.ProductionMinutes < 0) return BadRequest(new { message = "El tiempo de producción no puede ser negativo." });
         if (request.MaintenancePercent < 0 || request.PreparationPercent < 0 || request.LaborPercent < 0 || request.WastePercent < 0 || request.OverheadPercent < 0) return BadRequest(new { message = "Los porcentajes no pueden ser negativos." });
         return null;
     }

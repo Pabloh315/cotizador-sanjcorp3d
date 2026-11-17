@@ -38,7 +38,7 @@ public sealed class TenantsController(
             return Conflict(new { message = "Ya existe una cuenta con ese identificador." });
 
         if (await users.FindByNameAsync(request.Username.Trim()) is not null)
-            return Conflict(new { message = "Ese nombre de usuario ya estÃƒÆ’Ã‚Â¡ en uso. Elige uno diferente." });
+            return Conflict(new { message = "Ese nombre de usuario ya está en uso. Elige uno diferente." });
 
         var strategy = db.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync<IActionResult>(async () =>
@@ -102,9 +102,11 @@ public sealed class TenantsController(
             tenantContext.Use(id);
             db.SaleConsumables.RemoveRange(await db.SaleConsumables.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.Sales.RemoveRange(await db.Sales.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
+            db.PrintOrders.RemoveRange(await db.PrintOrders.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.QuoteConsumables.RemoveRange(await db.QuoteConsumables.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.QuoteMaterials.RemoveRange(await db.QuoteMaterials.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.ChatMessages.RemoveRange(await db.ChatMessages.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
+            db.InventoryLosses.RemoveRange(await db.InventoryLosses.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.ConsumableStockLots.RemoveRange(await db.ConsumableStockLots.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.Quotes.RemoveRange(await db.Quotes.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
             db.Printers.RemoveRange(await db.Printers.IgnoreQueryFilters().Where(x => x.TenantId == id).ToListAsync(ct));
@@ -190,7 +192,7 @@ public sealed class TenantsController(
     {
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120) throw new ArgumentException("El nombre de la cuenta es obligatorio y admite hasta 120 caracteres.");
         if (string.IsNullOrWhiteSpace(slug) || slug.Trim().Length > 80) throw new ArgumentException("El identificador de la cuenta es obligatorio y admite hasta 80 caracteres.");
-        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmeros y guiones.");
+        if (!Slug(slug).All(x => char.IsLetterOrDigit(x) || x == '-')) throw new ArgumentException("El identificador solo puede usar letras, números y guiones.");
         if (!string.IsNullOrWhiteSpace(logo) && logo.Length > 2_000_000) throw new ArgumentException("El logo es demasiado grande.");
     }
 

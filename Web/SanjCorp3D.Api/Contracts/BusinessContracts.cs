@@ -25,11 +25,14 @@ public sealed record QuoteRequest(
     decimal? WastePercent = null, decimal? OverheadPercent = null, decimal? PackagingCost = null, decimal? TransportCost = null);
 
 public sealed record QuoteCalculationDto(
-    decimal TotalWeight, decimal MaterialCost, decimal ElectricityCost,
+    decimal TotalWeight, decimal MaterialCost, decimal EnergyConsumptionKwh, decimal ElectricityCost,
     decimal MaintenanceCost, decimal PreparationCost, decimal LaborCost,
     decimal WasteCost, decimal OverheadCost, decimal PackagingCost, decimal TransportCost,
     decimal AdditionalCost, decimal Subtotal,
-    decimal ProfitAmount, decimal TaxAmount, decimal RecommendedPrice);
+    decimal ProfitAmount, decimal TaxAmount, decimal RecommendedPrice,
+    IReadOnlyList<ProfitOptionDto> ProfitOptions);
+
+public sealed record ProfitOptionDto(int Percentage, decimal Multiplier, decimal Price, decimal Profit);
 
 public sealed record CreateUserRequest(string Username, string DisplayName, string? Email, string Password, string Role, string? ProfilePhotoUrl = null);
 public sealed record UpdateUserRequest(string DisplayName, string? Email, string Role, bool Active, string? ProfilePhotoUrl = null);
