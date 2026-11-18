@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { colorsFor } from './materialCatalog'
 import { printerCatalog, printerCatalogLabel } from './printerCatalog'
 
@@ -26,9 +27,16 @@ export function CatalogProductImage({ kind, brand, model = '', material = '', co
   const resin = kind === 'resin'
   const technology = catalogPrinter?.technology ?? (kind === 'printer' ? 'FDM/FFF' : '')
   const title = kind === 'printer' ? `${displayBrand} ${displayModel}`.trim() : `${displayBrand} ${material} ${colorName}`.trim()
+  const photoQuery = kind === 'printer'
+    ? `${displayBrand} ${displayModel} 3D printer official product`
+    : `${displayBrand} ${material} ${colorName} ${resin ? '3D printer resin bottle' : '3D printing filament spool'} official product`
+  const photoUrl = `https://tse2.mm.bing.net/th?q=${encodeURIComponent(photoQuery)}&w=640&h=480&c=7&rs=1&p=0`
+  const [photoFailed, setPhotoFailed] = useState(false)
+  useEffect(() => setPhotoFailed(false), [photoUrl])
 
   return <figure className={`catalog-product-image ${compact ? 'compact' : ''}`} aria-label={`Imagen automática de ${title}`} title={title}>
-    <svg viewBox="0 0 180 128" role="img" aria-hidden="true">
+    {!photoFailed && <img src={photoUrl} alt={`${title} — fotografía referencial del producto`} loading="lazy" referrerPolicy="no-referrer" onError={() => setPhotoFailed(true)} />}
+    {photoFailed && <svg viewBox="0 0 180 128" role="img" aria-label={`Imagen de respaldo para ${title}`}>
       <rect width="180" height="128" rx="12" fill="#0b1714" />
       <circle cx="152" cy="20" r="34" fill={accent} opacity=".14" />
       {kind === 'printer' && technology.includes('Resina') && <>
@@ -58,7 +66,7 @@ export function CatalogProductImage({ kind, brand, model = '', material = '', co
         <rect x="61" y="59" width="58" height="34" rx="4" fill="#e7efec" opacity=".9" />
         <path d="M72 71h36M72 80h24" stroke={accent} strokeWidth="4" strokeLinecap="round" />
       </>}
-    </svg>
+    </svg>}
     {!compact && <figcaption><strong>{displayBrand}</strong><span>{kind === 'printer' ? displayModel : [material, colorName].filter(Boolean).join(' · ')}</span></figcaption>}
   </figure>
 }
