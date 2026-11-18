@@ -5,7 +5,7 @@ const entries = (brand: string, technology: PrinterTechnology, models: string[])
 
 /** Catálogo comercial extensible. Los formularios siempre permiten escribir marcas y modelos nuevos. */
 export const printerCatalog: PrinterCatalogEntry[] = [
-  ...entries('Bambu Lab', 'FDM/FFF', ['H2D', 'H2D Pro', 'H2S', 'P2S', 'X1 Carbon', 'X1E', 'P1S', 'P1P', 'A1', 'A1 mini']),
+  ...entries('Bambu Lab', 'FDM/FFF', ['H2C', 'H2D', 'H2D Pro', 'H2S', 'P2S', 'X1 Carbon', 'X1E', 'P1S', 'P1P', 'A1', 'A1 mini']),
   ...entries('Creality', 'FDM/FFF', ['K3', 'K2 Plus', 'K2 Pro', 'K2', 'K2 SE', 'K1 Max', 'K1C 2025', 'K1', 'SPARKX i7', 'SPARKX i7 Nano', 'Ender-5 Max', 'Ender-3 V3 Mega', 'Ender-3 V3 Plus', 'Ender-3 V3 KE', 'Ender-3 V3 SE', 'Ender-3 V3', 'Creality Hi', 'CR-30']),
   ...entries('Creality', 'Resina MSLA/SLA', ['HALOT-X1', 'HALOT-X1 Neo', 'HALOT-MAGE S', 'HALOT-MAGE PRO', 'HALOT-ONE PRO']),
   ...entries('Original Prusa', 'FDM/FFF', ['CORE One+ (Gen 2)', 'CORE One L+', 'XL+', 'MK4S', 'MINI+', 'Pro HT90', 'Pro AFS']),

@@ -12,6 +12,26 @@ type Props = {
   compact?: boolean
 }
 
+const officialDomains: Record<string, string> = {
+  'Bambu Lab': 'bambulab.com', Creality: 'creality.com', 'Original Prusa': 'prusa3d.com', Anycubic: 'anycubic.com', ELEGOO: 'elegoo.com',
+  'QIDI Tech': 'qidi3d.com', Flashforge: 'flashforge.com', Phrozen: 'phrozen3d.com', Formlabs: 'formlabs.com', Raise3D: 'raise3d.com',
+  UltiMaker: 'ultimaker.com', Snapmaker: 'snapmaker.com', Sovol: 'sovol3d.com', FLSUN: 'flsun3d.com', AnkerMake: 'ankermake.com',
+  Artillery: 'artillery3d.com', MINGDA: '3dmingda.com', Tronxy: 'tronxy3d.com', Kingroon: 'kingroon.com', GEEETECH: 'geeetech.com',
+  LulzBot: 'lulzbot.com', BCN3D: 'bcn3d.com', Zortrax: 'zortrax.com', Craftbot: 'craftbot.com', Peopoly: 'peopoly.net',
+  Uniformation: 'uniformation3d.com', HeyGears: 'heygears.com', Asiga: 'asiga.com', Markforged: 'markforged.com', Stratasys: 'stratasys.com',
+  Polymaker: 'polymaker.com', eSUN: 'esun3d.com', SUNLU: 'sunlu.com', Overture: 'overture3d.com', HATCHBOX: 'hatchbox3d.com',
+  Prusament: 'prusa3d.com', Fiberlogy: 'fiberlogy.com', Spectrum: 'spectrumfilaments.com', colorFabb: 'colorfabb.com', FormFutura: 'formfutura.com',
+  MatterHackers: 'matterhackers.com', AMOLEN: 'amolen.com', 'Proto-pasta': 'proto-pasta.com', Recreus: 'recreus.com', NinjaTek: 'ninjatek.com',
+  'Siraya Tech': 'siraya.tech', RESIONE: 'resione.com', 'JAMG HE': 'jamghe.com', AmeraLabs: 'ameralabs.com', Liqcreate: 'liqcreate.com',
+}
+
+const colorSearchNames: Record<string, string> = {
+  Negro: 'Black', Blanco: 'White', Gris: 'Gray', Rojo: 'Red', Azul: 'Blue', 'Azul cielo': 'Light Blue', 'Azul marino': 'Navy Blue',
+  Verde: 'Green', 'Verde lima': 'Lime Green', 'Verde oliva': 'Olive Green', Amarillo: 'Yellow', Naranja: 'Orange', Rosa: 'Pink',
+  Morado: 'Purple', Marrón: 'Brown', Beige: 'Beige', Crema: 'Cream', Magenta: 'Magenta', Vino: 'Wine Red', Natural: 'Natural',
+  Transparente: 'Transparent Clear', Dorado: 'Gold', Plateado: 'Silver', Turquesa: 'Teal',
+}
+
 function brandAccent(brand: string) {
   let hash = 0
   for (const character of brand) hash = character.charCodeAt(0) + ((hash << 5) - hash)
@@ -27,9 +47,12 @@ export function CatalogProductImage({ kind, brand, model = '', material = '', co
   const resin = kind === 'resin'
   const technology = catalogPrinter?.technology ?? (kind === 'printer' ? 'FDM/FFF' : '')
   const title = kind === 'printer' ? `${displayBrand} ${displayModel}`.trim() : `${displayBrand} ${material} ${colorName}`.trim()
+  const officialSite = officialDomains[displayBrand]
+  const siteFilter = officialSite ? `site:${officialSite}` : ''
+  const searchableColor = colorSearchNames[colorName] ?? colorName
   const photoQuery = kind === 'printer'
-    ? `${displayBrand} ${displayModel} 3D printer official product`
-    : `${displayBrand} ${material} ${colorName} ${resin ? '3D printer resin bottle' : '3D printing filament spool'} official product`
+    ? `${siteFilter} ${displayBrand} ${displayModel} 3D printer product photo`
+    : `${siteFilter} ${displayBrand} ${material} ${searchableColor} ${resin ? 'resin bottle' : 'filament spool'} product photo`
   const photoUrl = `https://tse2.mm.bing.net/th?q=${encodeURIComponent(photoQuery)}&w=640&h=480&c=7&rs=1&p=0`
   const [photoFailed, setPhotoFailed] = useState(false)
   useEffect(() => setPhotoFailed(false), [photoUrl])
