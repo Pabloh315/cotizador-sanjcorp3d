@@ -462,6 +462,15 @@ body.atlas-theme-light .wizard-steps button.active span {
 .loss-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: .8rem; }
 .retail-report-metrics, .retail-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: .8rem; }
 .retail-dialog { width: min(760px, 100%); max-height: 92vh; overflow-y: auto; }
+.catalog-product-image { width: min(240px, 100%); margin: 0 0 .9rem; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 10px; background: #0b1714; }
+.catalog-product-image svg { display: block; width: 100%; height: auto; }
+.catalog-product-image figcaption { display: grid; gap: .12rem; padding: .55rem .7rem; }
+.catalog-product-image figcaption strong { font-size: .75rem; }
+.catalog-product-image figcaption span { overflow: hidden; color: var(--muted); font-size: .66rem; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-product-image.compact { width: 64px; min-width: 64px; margin: 0; border-radius: 7px; }
+.catalog-product-image.compact svg { height: 48px; object-fit: cover; }
+.product-with-image { display: flex; align-items: center; gap: .65rem; min-width: 190px; }
+.product-with-image > span { min-width: 0; }
 .retail-filters { justify-content: flex-start; }
 .retail-filters > input { min-width: min(280px, 100%); flex: 1; }
 .retail-filters > select { width: auto; min-width: 175px; }
