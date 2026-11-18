@@ -465,16 +465,35 @@ body.atlas-theme-light .wizard-steps button.active span {
 .catalog-product-image { width: min(240px, 100%); margin: 0 0 .9rem; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 10px; background: #0b1714; }
 .catalog-product-image svg, .catalog-product-image img { display: block; width: 100%; height: auto; }
 .catalog-product-image img { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; }
-.catalog-product-image.pending { border-style: dashed; }
-.photo-pending { min-height: 128px; display: grid; place-content: center; justify-items: center; gap: .45rem; padding: .8rem; color: var(--muted); background: linear-gradient(145deg, color-mix(in srgb, var(--product-color) 15%, #0b1714), #0b1714 65%); text-align: center; }
-.photo-pending span { font-size: .67rem; line-height: 1.25; }
+.generic-product { position: relative; display: grid; min-height: 128px; aspect-ratio: 4 / 3; place-items: center; overflow: hidden; background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--product-color) 18%, #263c37), #0b1714 72%); }
+.generic-printer .printer-shell { position: relative; width: 52%; height: 68%; border: 5px solid #71807d; border-radius: 8px 8px 4px 4px; background: linear-gradient(135deg, #26322f, #111917); box-shadow: 0 12px 20px #0008, inset 0 0 0 2px #9ba8a533; }
+.generic-printer .printer-window { position: absolute; inset: 12% 12% 20%; overflow: hidden; border: 3px solid #4f5d5a; border-radius: 3px; background: linear-gradient(145deg, #17312a, #08100e); }
+.generic-printer .printer-window::before { position: absolute; top: 20%; left: 12%; width: 76%; height: 4px; background: #8a9996; box-shadow: 0 4px 8px #000; content: ''; }
+.generic-printer .printer-window i { position: absolute; top: 24%; left: 47%; width: 8%; height: 23%; border-radius: 0 0 3px 3px; background: #c5d0cd; }
+.generic-printer .printer-window span { position: absolute; right: 14%; bottom: 13%; left: 14%; height: 7%; border-radius: 50%; background: var(--product-color); box-shadow: 0 0 12px color-mix(in srgb, var(--product-color) 70%, transparent); }
+.generic-printer .printer-shell b { position: absolute; right: 7%; bottom: 4%; color: #dbe5e2; font-size: .55rem; letter-spacing: .08em; }
+.generic-filament .filament-spool { position: relative; width: 55%; aspect-ratio: 1; border: 7px solid #303a38; border-radius: 50%; background: repeating-radial-gradient(circle, var(--product-color) 0 6%, color-mix(in srgb, var(--product-color) 72%, #000) 7% 10%); box-shadow: 0 12px 20px #0009, inset 0 0 0 4px #a7b1ae55; }
+.generic-filament .filament-spool::before, .generic-filament .filament-spool::after { position: absolute; inset: 17%; border: 4px solid #5b6764; border-radius: 50%; background: #111917; content: ''; }
+.generic-filament .filament-spool::after { inset: 36%; border-width: 5px; background: #08100e; }
+.generic-filament .filament-spool i, .generic-filament .filament-spool span { position: absolute; z-index: 1; top: 16%; bottom: 16%; left: 47%; width: 6%; background: #525f5c; transform: rotate(45deg); }
+.generic-filament .filament-spool span { transform: rotate(-45deg); }
+.generic-resin .resin-bottle { position: relative; width: 35%; height: 65%; border: 4px solid #677471; border-radius: 7px 7px 12px 12px; background: linear-gradient(to top, var(--product-color) 0 58%, #202b28 59%); box-shadow: 0 12px 20px #0009; }
+.generic-resin .resin-bottle::before { position: absolute; top: -18%; left: 20%; width: 60%; height: 18%; border-radius: 4px 4px 0 0; background: #8c9895; box-shadow: inset 0 4px #4d5956; content: ''; }
+.generic-resin .resin-bottle i { position: absolute; top: 26%; right: 10%; bottom: 12%; left: 10%; border: 2px solid #ffffff55; border-radius: 3px; background: #f5f1dfd9; }
+.generic-resin .resin-bottle span { position: absolute; z-index: 1; top: 40%; right: 23%; left: 23%; height: 4px; background: var(--product-color); box-shadow: 0 8px var(--product-color), 0 16px var(--product-color); }
 .catalog-product-image figcaption { display: grid; gap: .12rem; padding: .55rem .7rem; }
 .catalog-product-image figcaption strong { font-size: .75rem; }
 .catalog-product-image figcaption span { overflow: hidden; color: var(--muted); font-size: .66rem; text-overflow: ellipsis; white-space: nowrap; }
 .catalog-product-image.compact { width: 64px; min-width: 64px; margin: 0; border-radius: 7px; }
 .catalog-product-image.compact svg, .catalog-product-image.compact img { height: 48px; object-fit: contain; }
-.catalog-product-image.compact .photo-pending { min-height: 48px; height: 48px; gap: .15rem; padding: .2rem; }
-.catalog-product-image.compact .photo-pending span { font-size: .52rem; }
+.catalog-product-image.compact .generic-product { min-height: 48px; height: 48px; aspect-ratio: auto; }
+.catalog-product-image.compact .generic-printer .printer-shell { border-width: 2px; border-radius: 3px; }
+.catalog-product-image.compact .generic-printer .printer-window { border-width: 1px; }
+.catalog-product-image.compact .generic-printer .printer-shell b { display: none; }
+.catalog-product-image.compact .generic-filament .filament-spool { width: 58%; border-width: 3px; }
+.catalog-product-image.compact .generic-filament .filament-spool::before { border-width: 2px; }
+.catalog-product-image.compact .generic-filament .filament-spool::after { border-width: 2px; }
+.catalog-product-image.compact .generic-resin .resin-bottle { border-width: 2px; }
 .product-with-image { display: flex; align-items: center; gap: .65rem; min-width: 190px; }
 .product-with-image > span { min-width: 0; }
 .retail-filters { justify-content: flex-start; }
