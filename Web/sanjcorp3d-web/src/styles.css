@@ -2482,3 +2482,167 @@ body.atlas-theme-light .support-conversations > button { color: #143a33; }
 body.atlas-theme-light .support-conversations > button.active { background: #e4f6f0; }
 body.atlas-theme-light .chat-file { color: #123b35; background: #edf9f6; border-color: #aad8cd; }
 @media (max-width: 850px) { .support-chat.with-conversations { grid-template-columns: 1fr; } .support-conversations { grid-auto-flow: column; grid-auto-columns: minmax(170px, 1fr); overflow-x: auto; } }
+
+/* Premium mission-control interface, adapted from the STELLAR visual system */
+:root {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  --bg: #06101a;
+  --surface: #0b1825;
+  --surface-2: #102334;
+  --surface-3: #153247;
+  --line: #27465e;
+  --line-soft: #1a3448;
+  --text: #eaf4fb;
+  --muted: #8ea5b7;
+  --mint: #43dacb;
+  --mint-dark: #092e31;
+  --blue: #43bde2;
+  --orange: #f2b84b;
+  --red: #ff737d;
+  --shadow: 0 24px 70px rgba(0, 4, 10, .48);
+}
+body { background: radial-gradient(circle at 76% -18%, rgba(34, 112, 170, .28), transparent 32%), linear-gradient(135deg, #07111d 0%, #050c14 58%, #071521 100%); }
+.sidebar { background: rgba(4, 10, 17, .97); border-right-color: #182b3c; }
+.sidebar-brand { min-height: 86px; border-bottom-color: #182b3c; }
+.sidebar nav button { color: #a5b9c8; border-radius: 6px; }
+.sidebar nav button:hover { color: #f1f8fc; background: #0d2130; }
+.sidebar nav button.active { color: #59e3d7; background: linear-gradient(90deg, #123144, #0b202e); box-shadow: inset 3px 0 0 #3bd8e8; }
+.nav-section > p { color: #617d91; }
+.topbar { height: 64px; background: rgba(5, 13, 22, .9); border-bottom-color: #182d3f; }
+.connection-dot { background: #35e6aa; box-shadow: 0 0 12px #35e6aa; }
+.page-content { width: min(1600px, 100%); }
+.page-header { border-bottom-color: #183247; }
+.page-header h1 { font-weight: 720; }
+.eyebrow { color: #45d9ed; }
+.panel, .metric-card, .catalog-card, .maker-card, .line-item { background: linear-gradient(150deg, rgba(12, 27, 41, .97), rgba(7, 18, 29, .98)); border-color: #1d3b52; }
+.panel:hover { border-color: #2b617d; }
+button { background: linear-gradient(135deg, #32d9d0, #1a9fc1); }
+button:hover:not(:disabled) { background: linear-gradient(135deg, #5ee9df, #35b7d7); }
+button.secondary { color: #d8edf8; background: #0c2130; border-color: #29536d; }
+button.secondary:hover:not(:disabled) { background: #123047; }
+button.ghost { color: #c7dce8; border-color: #29475b; }
+input, select, textarea { color: #eef7fb; background: #07131e; border-color: #29465a; }
+input:focus, select:focus, textarea:focus { border-color: #3ad3e5; box-shadow: 0 0 0 3px rgba(58, 211, 229, .13); }
+.table-wrap { border-color: #1d394e; }
+th { color: #86a5b9; background: #091722; border-bottom-color: #25445a; }
+td { border-bottom-color: #162f42; }
+tbody tr:hover { background: rgba(44, 157, 190, .075); }
+.status.ok { color: #79e9c2; background: #0c3029; border-color: #205b4c; }
+
+/* Executive reports */
+.executive-report { --report-cyan: #32d9f5; --report-green: #48e0a4; --report-blue: #648dff; --report-amber: #f2b84b; }
+.report-command-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: .85rem 1rem; border: 1px solid #1c3b52; border-radius: 9px; background: linear-gradient(90deg, rgba(9, 28, 42, .95), rgba(7, 19, 30, .95)); }
+.report-command-bar > div:first-child { display: grid; gap: .28rem; }
+.report-command-bar strong { font: 650 .78rem "Cascadia Mono", Consolas, monospace; color: #d6e7f0; letter-spacing: .03em; }
+.report-command-bar strong em { margin: 0 .35rem; color: #56768b; font-style: normal; }
+.live-signal { display: flex; align-items: center; gap: .4rem; color: #7f9bad; font-size: .58rem; font-weight: 800; letter-spacing: .13em; }
+.live-signal i { width: 7px; height: 7px; border-radius: 50%; background: #43e5a8; box-shadow: 0 0 12px #43e5a8; }
+.report-date-controls { display: flex; align-items: end; gap: .55rem; }
+.report-date-controls label { gap: .2rem; color: #718ea2; font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; }
+.report-date-controls input { min-height: 34px; padding: .4rem .55rem; font-size: .72rem; }
+.report-date-controls button { min-height: 34px; padding: .45rem .7rem; font-size: .7rem; }
+.market-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: .8rem; overflow: hidden; border: 1px solid #1d3c51; border-radius: 9px; background: #071521; }
+.market-ticker { position: relative; min-width: 0; padding: 1rem 1.1rem; border-right: 1px solid #1b3649; }
+.market-ticker:last-child { border-right: 0; }
+.market-ticker::after { position: absolute; right: 0; bottom: 0; left: 0; height: 2px; background: var(--ticker); content: ''; opacity: .8; }
+.market-ticker.cyan { --ticker: var(--report-cyan); }.market-ticker.blue { --ticker: var(--report-blue); }.market-ticker.green { --ticker: var(--report-green); }.market-ticker.amber { --ticker: var(--report-amber); }.market-ticker.red { --ticker: var(--red); }
+.market-ticker > span { display: block; overflow: hidden; margin-bottom: .45rem; color: #7390a4; font-size: .58rem; font-weight: 800; letter-spacing: .11em; text-overflow: ellipsis; white-space: nowrap; }
+.market-ticker strong { display: block; overflow: hidden; color: #f0f7fb; font-size: clamp(1.15rem, 2vw, 1.6rem); letter-spacing: -.025em; text-overflow: ellipsis; white-space: nowrap; }
+.market-ticker small { display: flex; align-items: center; gap: .22rem; margin-top: .45rem; color: var(--ticker); font-size: .65rem; }
+.financial-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-bottom: .8rem; }
+.financial-kpi { position: relative; min-width: 0; overflow: hidden; padding: 1rem; border: 1px solid #1c3b51; border-radius: 9px; background: linear-gradient(145deg, #0c1b29, #081521); }
+.financial-kpi-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.financial-kpi-head > span { display: flex; align-items: center; gap: .45rem; color: #9ab1c0; font-size: .67rem; font-weight: 700; }
+.financial-kpi-head svg { color: #38cfe4; }
+.financial-kpi-head em { padding: .22rem .38rem; border: 1px solid currentColor; border-radius: 999px; font-size: .55rem; font-style: normal; }
+.financial-kpi > strong { display: block; margin-top: .9rem; font-size: clamp(1.35rem, 2.4vw, 2rem); letter-spacing: -.04em; }
+.financial-kpi p { margin: .3rem 0 0; color: #708b9f; font-size: .63rem; line-height: 1.4; }
+.financial-kpi > i { position: absolute; right: -25px; bottom: -55px; width: 90px; height: 90px; border: 1px solid #2b566e; border-radius: 50%; opacity: .45; }
+.financial-kpi > i.good { border-color: #2c8a69; }.financial-kpi > i.watch { border-color: #9d762f; }
+.warning-text { color: #f2b84b !important; }
+.report-terminal-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, .75fr); gap: .8rem; }
+.performance-panel, .intelligence-panel, .allocation-panel, .report-table-panel { animation: none; }
+.terminal-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.terminal-heading > div > span { display: block; margin-bottom: .35rem; color: #68879b; font-size: .58rem; font-weight: 800; letter-spacing: .12em; }
+.terminal-heading h2 { color: #edf6fa; font-size: 1rem; }
+.terminal-heading p { margin: .35rem 0 0; color: #7891a2; font-size: .68rem; line-height: 1.45; }
+.terminal-heading > svg, .terminal-heading > strong { color: #3dd2e7; }
+.chart-key { display: flex; gap: .8rem; color: #87a0b1; font-size: .62rem; }
+.chart-key span { display: flex; align-items: center; gap: .3rem; }
+.chart-key i { width: 16px; height: 2px; background: var(--report-cyan); }.chart-key i.profit { background: var(--report-green); }
+.performance-chart { min-height: 270px; overflow: hidden; }
+.performance-chart svg { display: block; width: 100%; height: 270px; overflow: visible; }
+.performance-chart line { stroke: #1a3548; stroke-width: 1; stroke-dasharray: 3 5; }
+.performance-chart .zero-line { stroke: #547084; stroke-width: 1.4; stroke-dasharray: none; }
+.performance-chart text { fill: #638096; font: 10px "Cascadia Mono", Consolas, monospace; }
+.performance-chart .revenue-line, .performance-chart .profit-line { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.performance-chart .revenue-line { stroke: var(--report-cyan); stroke-width: 2.4; }.performance-chart .profit-line { stroke: var(--report-green); stroke-width: 1.8; }
+.performance-chart .revenue-point { fill: #07131e; stroke: var(--report-cyan); stroke-width: 2; }.performance-chart .profit-point { fill: #07131e; stroke: var(--report-green); stroke-width: 2; }
+.performance-summary { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid #1a3548; }
+.performance-summary > div { display: grid; gap: .2rem; padding: .8rem .5rem 0; border-right: 1px solid #1a3548; }
+.performance-summary > div:last-child { border-right: 0; }
+.performance-summary span { color: #698599; font-size: .58rem; letter-spacing: .06em; text-transform: uppercase; }
+.performance-summary strong { font-size: .83rem; }
+.intelligence-panel { display: grid; align-content: start; gap: .55rem; }
+.report-insight { display: grid; grid-template-columns: 34px 1fr; gap: .65rem; padding: .75rem; border: 1px solid #1d3a4f; border-radius: 7px; background: #081723; }
+.report-insight > span { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 6px; color: #4eddb0; background: #0c302a; }
+.report-insight.watch > span { color: #f2b84b; background: #342817; }.report-insight.risk > span { color: #ff7c84; background: #351b22; }
+.report-insight strong { font-size: .72rem; }.report-insight p { margin: .25rem 0 0; color: #7e99aa; font-size: .64rem; line-height: 1.45; }
+.allocation-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-top: .8rem; }
+.allocation-bars { display: grid; gap: .85rem; }
+.allocation-bars > div > div { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: .3rem; font-size: .66rem; }
+.allocation-bars span { min-width: 0; overflow: hidden; color: #a8bac6; text-overflow: ellipsis; white-space: nowrap; }
+.allocation-bars span i { margin-right: .5rem; color: #3ccde1; font-family: "Cascadia Mono", Consolas, monospace; font-style: normal; }
+.allocation-bars strong { color: #dce9f0; font-size: .64rem; white-space: nowrap; }
+.allocation-bars progress { width: 100%; height: 5px; display: block; overflow: hidden; border: 0; border-radius: 999px; background: #142a39; }
+.allocation-bars progress::-webkit-progress-bar { background: #142a39; }.allocation-bars progress::-webkit-progress-value { background: linear-gradient(90deg, #2c89e8, #38d9e6); border-radius: 999px; }.allocation-bars progress::-moz-progress-bar { background: #38d9e6; }
+.allocation-bars small { display: block; margin-top: .23rem; color: #5f7d91; font-size: .56rem; text-align: right; }
+.report-table-panel .table-wrap { margin-top: .35rem; }
+.market-pill { display: inline-flex; align-items: center; padding: .25rem .42rem; border: 1px solid; border-radius: 999px; font-size: .6rem; font-weight: 750; }
+.market-pill.up { color: #69dfb1; background: #0b2a24; border-color: #205a49; }.market-pill.watch { color: #f2c36e; background: #2d2417; border-color: #604922; }.market-pill.neutral { color: #8ddbef; background: #0c2735; border-color: #20546b; }
+
+body.atlas-theme-light { --bg: #eef4f8; --surface: #fff; --surface-2: #eaf2f7; --surface-3: #dae9f2; --line: #b9cedb; --line-soft: #d3e1e9; --text: #102433; --muted: #5f7889; }
+body.atlas-theme-light .report-command-bar, body.atlas-theme-light .market-strip, body.atlas-theme-light .financial-kpi, body.atlas-theme-light .report-insight { color: #102433; background: #f8fbfd; border-color: #c9dae5; }
+body.atlas-theme-light .market-ticker { border-color: #d5e2e9; }
+body.atlas-theme-light .market-ticker strong, body.atlas-theme-light .financial-kpi > strong, body.atlas-theme-light .terminal-heading h2, body.atlas-theme-light .allocation-bars strong { color: #102433; }
+body.atlas-theme-light .performance-chart line { stroke: #cfdee7; }
+
+@media (max-width: 1180px) {
+  .market-strip, .financial-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .market-ticker:nth-child(2) { border-right: 0; }
+  .market-ticker:nth-child(-n+2) { border-bottom: 1px solid #1b3649; }
+  .report-terminal-grid { grid-template-columns: 1fr; }
+  .intelligence-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .intelligence-panel .terminal-heading { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .page-content { padding: 1rem; padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)); }
+  .topbar { gap: .4rem; padding: 0 .7rem; }
+  .theme-toggle { width: 38px; min-width: 38px; padding: 0; overflow: hidden; font-size: 0; }
+  .theme-toggle svg { width: 17px; height: 17px; }
+  .profile-chip { padding-left: .35rem; }
+  button, .sidebar nav button { min-height: 44px; }
+  input, select, textarea { font-size: 16px; }
+  .report-command-bar { align-items: stretch; flex-direction: column; }
+  .report-date-controls { display: grid; grid-template-columns: 1fr 1fr; }
+  .report-date-controls button { grid-column: 1 / -1; }
+  .allocation-grid { grid-template-columns: 1fr; }
+  .intelligence-panel { grid-template-columns: 1fr; }
+  .intelligence-panel .terminal-heading { grid-column: auto; }
+  .chart-key { align-self: flex-start; }
+  .terminal-heading { flex-wrap: wrap; }
+  .performance-summary { grid-template-columns: 1fr; }
+  .performance-summary > div { border-right: 0; border-bottom: 1px solid #1a3548; padding: .7rem 0; }
+  .performance-summary > div:last-child { border-bottom: 0; }
+  .report-table-panel { padding: .85rem; }
+}
+@media (max-width: 520px) {
+  .market-strip, .financial-kpis { grid-template-columns: 1fr; }
+  .market-ticker { border-right: 0; border-bottom: 1px solid #1b3649; }
+  .market-ticker:last-child { border-bottom: 0; }
+  .market-ticker:nth-child(2) { border-bottom: 1px solid #1b3649; }
+  .report-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .performance-panel { padding: .8rem; }
+  .performance-chart { min-height: 220px; overflow-x: auto; }
+  .performance-chart svg { min-width: 620px; height: 220px; }
+}
