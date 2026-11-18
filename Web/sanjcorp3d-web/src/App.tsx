@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import {
-  AlertTriangle, BarChart3, Bell, Calculator, CircleHelp, ClipboardList, FileClock, Gauge, Layers3, LockKeyhole,
-  LogOut, Menu, MessageCircle, Moon, PackagePlus, PackageSearch, Printer, Settings, ShieldCheck, ShoppingCart, Sun, Users, X,
+  AlertTriangle, BarChart3, Bell, Calculator, CircleHelp, ClipboardList, FileClock, Gauge, Layers3, LoaderCircle, LockKeyhole,
+  LogOut, Menu, MessageCircle, Moon, PackagePlus, PackageSearch, Printer, RefreshCw, Settings, ShieldCheck, ShoppingCart, Sun, Users, X,
 } from 'lucide-react'
 import { api, type Profile } from './api'
 import type { InventoryAlert } from './types'
@@ -175,19 +175,41 @@ function Application({ profile, theme, onToggleTheme, onProfileChange, onLogout 
 function InventoryAlerts({ onOpen }: { onOpen: () => void }) {
   const [alerts, setAlerts] = useState<InventoryAlert[]>([])
   const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const menuRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    let active = true
-    const load = () => { api.alerts().then(next => { if (active) setAlerts(next) }).catch(() => undefined) }
-    load()
-    const interval = window.setInterval(load, 30_000)
-    const listener = () => load()
-    window.addEventListener('inventory-changed', listener)
-    return () => { active = false; window.clearInterval(interval); window.removeEventListener('inventory-changed', listener) }
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setAlerts(await api.alerts())
+      setError('')
+    } catch {
+      setError('No se pudieron actualizar las alarmas de inventario.')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
-  return <div className="alerts-menu">
-    <button className={`icon ghost alerts-button ${alerts.length > 0 ? 'has-alerts' : ''}`} aria-label={`Alarmas de inventario${alerts.length ? `: ${alerts.length}` : ''}`} aria-expanded={open} onClick={() => setOpen(current => !current)}><Bell size={18} />{alerts.length > 0 && <span className="notification-badge">{alerts.length > 99 ? '99+' : alerts.length}</span>}</button>
-    {open && <div className="alerts-popover" role="dialog" aria-label="Alarmas de inventario"><div className="alerts-popover-header"><div><p className="eyebrow">INVENTARIO</p><h3>Alarmas</h3></div><button className="icon ghost" aria-label="Cerrar alarmas" onClick={() => setOpen(false)}><X size={16} /></button></div>{alerts.length === 0 ? <p className="alerts-empty">No hay filamentos bajo el umbral.</p> : <div className="alerts-list">{alerts.map(alert => <button key={alert.id} className={`inventory-alert ${alert.severity}`} onClick={() => { setOpen(false); onOpen() }}><AlertTriangle size={17} /><span><strong>{alert.severity === 'out' ? 'Agotado' : 'Stock bajo'}</strong><small>{alert.message}</small></span></button>)}</div>}</div>}
+  useEffect(() => {
+    load()
+    const interval = window.setInterval(load, 30_000)
+    const listener = () => { void load() }
+    window.addEventListener('inventory-changed', listener)
+    return () => { window.clearInterval(interval); window.removeEventListener('inventory-changed', listener) }
+  }, [load])
+
+  useEffect(() => {
+    if (!open) return
+    const closeOutside = (event: PointerEvent) => { if (!menuRef.current?.contains(event.target as Node)) setOpen(false) }
+    const closeWithEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('keydown', closeWithEscape)
+    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeWithEscape) }
+  }, [open])
+
+  return <div className="alerts-menu" ref={menuRef}>
+    <button className={`icon ghost alerts-button ${alerts.length > 0 ? 'has-alerts' : ''}`} aria-label={`Alarmas de inventario${alerts.length ? `: ${alerts.length}` : ''}`} aria-controls="inventory-alerts-popover" aria-expanded={open} onClick={() => { const next = !open; setOpen(next); if (next) void load() }}><Bell size={18} />{alerts.length > 0 && <span className="notification-badge">{alerts.length > 99 ? '99+' : alerts.length}</span>}</button>
+    {open && <div id="inventory-alerts-popover" className="alerts-popover" role="region" aria-label="Alarmas de inventario"><div className="alerts-popover-header"><div><p className="eyebrow">INVENTARIO</p><h3>Alarmas</h3></div><div className="alerts-popover-actions"><button className="icon ghost" aria-label="Actualizar alarmas" title="Actualizar" disabled={loading} onClick={() => void load()}><RefreshCw size={15} className={loading ? 'spin' : ''} /></button><button className="icon ghost" aria-label="Cerrar alarmas" onClick={() => setOpen(false)}><X size={16} /></button></div></div>{error ? <div className="alerts-error" role="alert"><AlertTriangle size={16} /><span>{error}</span><button type="button" className="small ghost" onClick={() => void load()}>Reintentar</button></div> : loading && alerts.length === 0 ? <p className="alerts-empty"><LoaderCircle className="spin" size={15} />Actualizando alarmas…</p> : alerts.length === 0 ? <p className="alerts-empty">No hay consumibles bajo el umbral.</p> : <div className="alerts-list">{alerts.map(alert => <button key={alert.id} className={`inventory-alert ${alert.severity}`} onClick={() => { setOpen(false); onOpen() }}><AlertTriangle size={17} /><span><strong>{alert.severity === 'out' ? 'Agotado' : 'Stock bajo'}</strong><small>{alert.message}</small></span></button>)}</div>}</div>}
   </div>
 }

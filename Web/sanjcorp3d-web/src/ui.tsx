@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import type { ReactNode } from 'react'
-import { AlertCircle, CheckCircle2, Inbox, LoaderCircle } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { AlertCircle, CheckCircle2, Inbox, LoaderCircle, X } from 'lucide-react'
 
 export function todayInput(date = new Date()) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
@@ -53,11 +53,26 @@ export function Loading({ label = 'Cargando…' }: { label?: string }) {
 }
 
 export function ErrorMessage({ error }: { error?: string }) {
-  return error ? <div className="alert error" role="alert"><AlertCircle size={18} /><span>{error}</span></div> : null
+  return <DismissibleMessage message={error} variant="error" />
 }
 
 export function SuccessMessage({ message }: { message?: string }) {
-  return message ? <div className="alert success" role="status"><CheckCircle2 size={18} /><span>{message}</span></div> : null
+  return <DismissibleMessage message={message} variant="success" />
+}
+
+function DismissibleMessage({ message, variant }: { message?: string; variant: 'error' | 'success' }) {
+  const [visible, setVisible] = useState(Boolean(message))
+  useEffect(() => {
+    setVisible(Boolean(message))
+    if (!message) return
+    const timeout = window.setTimeout(() => setVisible(false), variant === 'success' ? 5_000 : 9_000)
+    return () => window.clearTimeout(timeout)
+  }, [message, variant])
+  if (!message || !visible) return null
+  const Icon = variant === 'error' ? AlertCircle : CheckCircle2
+  return <div className={`alert ${variant} dismissible-alert`} role={variant === 'error' ? 'alert' : 'status'} aria-live={variant === 'error' ? 'assertive' : 'polite'}>
+    <Icon size={18} /><span>{message}</span><button type="button" className="alert-dismiss" aria-label="Cerrar notificación" onClick={() => setVisible(false)}><X size={15} /></button>
+  </div>
 }
 
 export function Empty({ children = 'Todavia no hay informacion para mostrar.' }: { children?: ReactNode }) {

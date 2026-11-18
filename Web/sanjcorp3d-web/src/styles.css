@@ -106,7 +106,10 @@ h3 { margin: 0; font-size: .98rem; }
 .alerts-popover-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .8rem; padding-bottom: .65rem; border-bottom: 1px solid var(--line-soft); }
 .alerts-popover-header .eyebrow { margin-bottom: .2rem; }
 .alerts-popover-header h3 { font-size: .95rem; }
-.alerts-empty { margin: .9rem .2rem .2rem; color: var(--muted); font-size: .76rem; }
+.alerts-popover-actions { display: flex; gap: .3rem; }
+.alerts-empty { display: flex; align-items: center; gap: .45rem; margin: .9rem .2rem .2rem; color: var(--muted); font-size: .76rem; }
+.alerts-error { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: .55rem; margin-top: .7rem; padding: .65rem; border: 1px solid #643431; border-radius: 8px; color: #ffd0ce; background: #2d1817; font-size: .7rem; }
+.alerts-error button { grid-column: 2; justify-self: start; }
 .alerts-list { display: grid; gap: .45rem; margin-top: .65rem; max-height: 300px; overflow-y: auto; }
 .inventory-alert { width: 100%; display: flex; align-items: flex-start; justify-content: flex-start; gap: .65rem; padding: .7rem; color: #ffdda7; background: #241b10; border: 1px solid #574022; text-align: left; }
 .inventory-alert.out { color: #ffd0ce; background: #2d1817; border-color: #643431; }
@@ -144,6 +147,11 @@ h3 { margin: 0; font-size: .98rem; }
 .alert { display: flex; align-items: flex-start; gap: .65rem; margin-bottom: 1rem; padding: .8rem 1rem; border-radius: 9px; border: 1px solid; font-size: .87rem; }
 .alert.error { color: #ffd0ce; background: #2d1817; border-color: #643431; }
 .alert.success { color: #c8f5e5; background: #102a21; border-color: #2c5b4b; }
+.dismissible-alert { animation: notification-in .2s ease-out; }
+.dismissible-alert > span { flex: 1; line-height: 1.4; }
+.alert-dismiss { width: 26px; height: 26px; min-height: 26px; display: grid; flex: 0 0 26px; place-items: center; margin: -.25rem -.4rem -.25rem .2rem; padding: 0; border: 0; border-radius: 6px; color: currentColor; background: transparent; }
+.alert-dismiss:hover:not(:disabled) { color: currentColor; background: #ffffff12; }
+@keyframes notification-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .status { display: inline-flex; width: max-content; align-items: center; border-radius: 6px; padding: .28rem .46rem; font-size: .6rem; font-weight: 850; letter-spacing: .07em; white-space: nowrap; }
 .status.ok { color: #aef0d7; background: #15372c; border: 1px solid #295b49; }
 .status.warning { color: #ffda9e; background: #372817; border: 1px solid #5d4424; }
