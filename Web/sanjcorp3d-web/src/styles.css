@@ -465,11 +465,16 @@ body.atlas-theme-light .wizard-steps button.active span {
 .catalog-product-image { width: min(240px, 100%); margin: 0 0 .9rem; overflow: hidden; border: 1px solid var(--line-soft); border-radius: 10px; background: #0b1714; }
 .catalog-product-image svg, .catalog-product-image img { display: block; width: 100%; height: auto; }
 .catalog-product-image img { aspect-ratio: 4 / 3; object-fit: contain; background: #fff; }
+.catalog-product-image.pending { border-style: dashed; }
+.photo-pending { min-height: 128px; display: grid; place-content: center; justify-items: center; gap: .45rem; padding: .8rem; color: var(--muted); background: linear-gradient(145deg, color-mix(in srgb, var(--product-color) 15%, #0b1714), #0b1714 65%); text-align: center; }
+.photo-pending span { font-size: .67rem; line-height: 1.25; }
 .catalog-product-image figcaption { display: grid; gap: .12rem; padding: .55rem .7rem; }
 .catalog-product-image figcaption strong { font-size: .75rem; }
 .catalog-product-image figcaption span { overflow: hidden; color: var(--muted); font-size: .66rem; text-overflow: ellipsis; white-space: nowrap; }
 .catalog-product-image.compact { width: 64px; min-width: 64px; margin: 0; border-radius: 7px; }
 .catalog-product-image.compact svg, .catalog-product-image.compact img { height: 48px; object-fit: contain; }
+.catalog-product-image.compact .photo-pending { min-height: 48px; height: 48px; gap: .15rem; padding: .2rem; }
+.catalog-product-image.compact .photo-pending span { font-size: .52rem; }
 .product-with-image { display: flex; align-items: center; gap: .65rem; min-width: 190px; }
 .product-with-image > span { min-width: 0; }
 .retail-filters { justify-content: flex-start; }
